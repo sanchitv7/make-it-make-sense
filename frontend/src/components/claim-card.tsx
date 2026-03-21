@@ -40,7 +40,7 @@ export function ClaimCard({ claim, result, isChecking }: ClaimCardProps) {
         border: "1px solid var(--border-subtle)",
         background: "var(--bg-card)",
         padding: "16px 16px 16px 20px",
-        overflow: "hidden",
+        overflowX: "hidden",
         transition: "border-color 0.5s ease",
       }}
     >
