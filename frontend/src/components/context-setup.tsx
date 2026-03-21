@@ -93,7 +93,7 @@ export function ContextSetup() {
             className="text-base leading-relaxed"
             style={{ color: "var(--text-secondary)" }}
           >
-            Real-time for live audio. Select a context to begin.
+            Real-time fact-checking for live audio. Select a context to begin.
           </p>
         </div>
 
