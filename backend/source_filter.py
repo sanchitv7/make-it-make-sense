@@ -1,44 +1,29 @@
-import re
 from urllib.parse import urlparse
 
-TRUSTED_DOMAINS = [
-    "reuters.com",
-    "apnews.com",
-    "bbc.com",
-    "bbc.co.uk",
-    "theguardian.com",
-    "fullfact.org",
-    "politifact.com",
-    "ons.gov.uk",
-    "who.int",
-    "factcheck.org",
-    "snopes.com",
-]
+BLOCKED_DOMAINS = {
+    "reddit.com",
+    "twitter.com",
+    "x.com",
+    "tiktok.com",
+    "facebook.com",
+    "instagram.com",
+    "threads.net",
+    "medium.com",
+    "substack.com",
+    "quora.com",
+    "4chan.org",
+    "tumblr.com",
+}
 
-GOV_PATTERN = re.compile(r"\.gov(\.[a-z]{2})?$")
 
-
-def _is_trusted(domain: str) -> bool:
+def _is_blocked(domain: str) -> bool:
     domain = domain.lower().lstrip("www.")
-    if domain in TRUSTED_DOMAINS:
-        return True
-    if GOV_PATTERN.search(domain):
-        return True
-    return False
+    return domain in BLOCKED_DOMAINS
 
 
-def filter_trusted_sources(urls: list[str]) -> list[str]:
-    trusted = []
-    for url in urls:
-        try:
-            domain = urlparse(url).netloc.lower().lstrip("www.")
-            if _is_trusted(domain):
-                trusted.append(url)
-        except Exception:
-            continue
-    return trusted
-
-
-def get_best_trusted_source(urls: list[str]) -> str | None:
-    trusted = filter_trusted_sources(urls)
-    return trusted[0] if trusted else None
+def is_blocked_url(url: str) -> bool:
+    try:
+        domain = urlparse(url).netloc.lower().lstrip("www.")
+        return _is_blocked(domain)
+    except Exception:
+        return False

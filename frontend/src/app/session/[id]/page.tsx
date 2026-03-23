@@ -74,7 +74,7 @@ export default function SessionPage() {
           onStop={handleStop}
         />
         <ListeningIndicator isConnected={isConnected} isPaused={isPaused} />
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 h-full">
           <VerdictFeed
             claims={claims}
             verdicts={verdicts}

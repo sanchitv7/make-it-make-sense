@@ -46,7 +46,7 @@ PROMPTS = {
     ),
 }
 
-FACT_CHECK_PROMPT = """You are a rigorous fact-checker. Given a claim, determine its accuracy.
+FACT_CHECK_PROMPT = """You are a rigorous fact-checker covering any topic globally. Given a claim, determine its accuracy.
 
 Claim: "{claim_text}"
 {speaker_context}
@@ -63,12 +63,24 @@ Respond in this exact JSON format:
 {{
   "verdict": "TRUE|FALSE|MISLEADING|UNVERIFIED",
   "verdict_summary": "A concise 1-2 sentence explanation of why this verdict was given",
-  "source_name": "Name of the primary source (e.g., 'Reuters', 'BBC News')",
-  "source_url": "URL of the primary source"
+  "source_name": "Name of the primary source (e.g., 'Reuters', 'The Hindu', 'NHK')",
+  "source_url": "URL of the primary source",
+  "source_credibility": 4,
+  "credibility_reason": "One sentence explaining why this source is credible"
 }}
+
+Source credibility scale (1-5):
+5 - Government body, intergovernmental org (UN, WHO, World Bank, IMF), official statistical agency
+4 - Established national/international news organization, peer-reviewed journal, major encyclopedia, academic institution
+3 - Regional newspaper, reputable industry publication, official institutional page
+2 - Personal blog, opinion site, unverified secondary source
+1 - Social media post, forum, satire site, AI content farm, anonymous wiki
+
+NEVER cite these as sources (score them 1 regardless): Reddit, Twitter/X, TikTok, Facebook, Instagram, Quora, 4chan, anonymous forum posts, or any social media content.
 
 Rules:
 - Only cite sources you actually found via search
 - Never fabricate URLs or source names
-- If you cannot find a reliable source, use UNVERIFIED
+- Credible sources exist in every country — The Hindu, NHK, Al Jazeera, Der Spiegel, and any official government or institutional page are all valid
+- If you cannot find a source with credibility ≥ 3, use UNVERIFIED
 - Be concise in your summary"""

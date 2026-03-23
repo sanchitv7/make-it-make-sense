@@ -238,18 +238,27 @@ export function useGeminiLive({
   const [isPaused, setIsPaused] = useState(false);
 
   const pause = useCallback(() => {
-    if (audioCtxRef.current?.state === "running") {
-      audioCtxRef.current.suspend();
-      setIsPaused(true);
-    }
+    // Stop mic tracks so the browser releases the mic indicator
+    mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+    mediaStreamRef.current = null;
+    teardownAudio();
+    setIsPaused(true);
   }, []);
 
-  const resume = useCallback(() => {
-    if (audioCtxRef.current?.state === "suspended") {
-      audioCtxRef.current.resume();
+  const resume = useCallback(async () => {
+    if (!isPaused) return;
+    try {
+      mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
+        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        await startAudio(wsRef.current);
+      }
       setIsPaused(false);
+    } catch (err) {
+      console.error("[Live] resume mic error:", err);
     }
-  }, []);
+  }, [isPaused]);
 
   const start = useCallback(async () => {
     stoppedRef.current = false;

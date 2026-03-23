@@ -42,6 +42,11 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+async def root():
+    return {"name": "Make It Make Sense API", "status": "ok", "version": "0.1.0"}
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}

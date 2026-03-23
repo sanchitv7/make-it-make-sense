@@ -46,6 +46,13 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col grain">
         {children}
         <Script id="sw-register" strategy="afterInteractive" src="/register-sw.js" />
+        <Script id="react-grab" strategy="afterInteractive">{`
+          if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            var s = document.createElement("script");
+            s.src = "/react-grab.js";
+            document.body.appendChild(s);
+          }
+        `}</Script>
       </body>
     </html>
   );

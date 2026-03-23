@@ -3,7 +3,7 @@
 # Start backend (FastAPI)
 cd backend
 source .venv/bin/activate 2>/dev/null || (uv venv && source .venv/bin/activate && uv pip install -r requirements.txt)
-uvicorn main:app --reload &
+uvicorn main:app --reload --timeout-graceful-shutdown 1 &
 BACKEND_PID=$!
 cd ..
 

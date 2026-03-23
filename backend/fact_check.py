@@ -1,43 +1,27 @@
 import json
 import os
+import re
 
 from google import genai
 from google.genai import types
 
 from models import FactCheckResponse, Verdict
 from prompts import FACT_CHECK_PROMPT
-from source_filter import filter_trusted_sources, _is_trusted
+from source_filter import is_blocked_url
 
 
 def get_genai_client() -> genai.Client:
     return genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 
-def _best_grounding_source(
-    metadata,
-) -> tuple[str | None, str | None]:
-    """
-    Returns (source_name, source_url) from grounding chunks.
-    Chunks have redirect URIs, so we match the domain from chunk.web.title
-    against our trusted list, and use the redirect URI as the link.
-    """
+def _first_grounding_url(metadata) -> str | None:
+    """Return the first web URI from grounding chunks, if any."""
     if not metadata or not metadata.grounding_chunks:
-        return None, None
-
+        return None
     for chunk in metadata.grounding_chunks:
-        if not chunk.web:
-            continue
-        title = chunk.web.title or ""  # e.g. "reuters.com" or "BBC News"
-        uri = chunk.web.uri or ""
-
-        # Try to match the title as a domain
-        domain = title.lower().strip()
-        # Strip page titles like "Reuters | US defense spending"
-        domain = domain.split(" ")[0].split("|")[0].strip()
-        if domain and _is_trusted(domain):
-            return title, uri
-
-    return None, None
+        if chunk.web and chunk.web.uri:
+            return chunk.web.uri
+    return None
 
 
 async def fact_check_claim(
@@ -55,17 +39,18 @@ async def fact_check_claim(
     )
 
     response = client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
+        model="gemini-2.5-flash",
         contents=prompt,
         config=types.GenerateContentConfig(
             tools=[types.Tool(google_search=types.GoogleSearch())],
-            response_mime_type="application/json",
         ),
     )
 
-    # Parse JSON response
+    # Parse JSON from response text (may be wrapped in markdown fences)
+    raw = response.text or ""
+    match = re.search(r"\{.*\}", raw, re.DOTALL)
     try:
-        result = json.loads(response.text)
+        result = json.loads(match.group() if match else raw)
     except (json.JSONDecodeError, ValueError):
         return FactCheckResponse(
             claim_text=claim_text,
@@ -74,31 +59,25 @@ async def fact_check_claim(
             verdict_summary="Failed to parse fact-check response",
         )
 
-    # Try grounding chunks first (title-based domain matching)
-    metadata = (
-        response.candidates[0].grounding_metadata
-        if response.candidates
-        else None
-    )
-    source_name, source_url = _best_grounding_source(metadata)
+    # Prefer grounding URL (from Google Search), fall back to model-provided URL
+    metadata = response.candidates[0].grounding_metadata if response.candidates else None
+    source_url = _first_grounding_url(metadata) or result.get("source_url") or ""
+    source_name = result.get("source_name")
 
-    # Fall back to model-provided source_url
-    if not source_url:
-        model_url = result.get("source_url", "")
-        trusted = filter_trusted_sources([model_url]) if model_url else []
-        if trusted:
-            source_url = trusted[0]
-            source_name = result.get("source_name")
+    # Check credibility score from the model
+    credibility = result.get("source_credibility", 0)
+    try:
+        credibility = int(credibility)
+    except (TypeError, ValueError):
+        credibility = 0
 
-    if not source_url:
-        # No trusted source — return UNVERIFIED
+    # Reject if no source, blocked domain, or credibility too low
+    if not source_url or is_blocked_url(source_url) or credibility < 3:
         return FactCheckResponse(
             claim_text=claim_text,
             timestamp_seconds=0,
             verdict=Verdict.UNVERIFIED,
-            verdict_summary=result.get(
-                "verdict_summary", "Could not verify with a trusted source"
-            ),
+            verdict_summary=result.get("verdict_summary", "Could not verify with a credible source"),
         )
 
     verdict_str = result.get("verdict", "UNVERIFIED").upper()
@@ -112,6 +91,6 @@ async def fact_check_claim(
         timestamp_seconds=0,
         verdict=verdict,
         verdict_summary=result.get("verdict_summary", ""),
-        source_name=source_name or result.get("source_name"),
+        source_name=source_name,
         source_url=source_url,
     )
