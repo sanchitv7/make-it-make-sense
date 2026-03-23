@@ -11,7 +11,11 @@ interface VerdictFeedProps {
 
 export function VerdictFeed({ claims, verdicts, checkingIds }: VerdictFeedProps) {
   if (claims.length === 0) {
-    return null;
+    return (
+      <p className="text-xs text-center font-mono mt-4" style={{ color: "var(--text-muted)" }}>
+        Claims will appear here as they&apos;re detected.
+      </p>
+    );
   }
 
   const reversed = [...claims].reverse();
