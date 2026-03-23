@@ -11,23 +11,7 @@ interface VerdictFeedProps {
 
 export function VerdictFeed({ claims, verdicts, checkingIds }: VerdictFeedProps) {
   if (claims.length === 0) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center h-full rounded-xl border p-8"
-        style={{
-          background: "var(--bg-card)",
-          borderColor: "var(--border-subtle)",
-        }}
-      >
-        <div className="text-3xl mb-3 opacity-30">◎</div>
-        <p
-          className="text-sm text-center font-mono"
-          style={{ color: "var(--text-muted)" }}
-        >
-          Claims will appear here as they&apos;re detected.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   const reversed = [...claims].reverse();

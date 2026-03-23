@@ -44,8 +44,19 @@ export default function SessionPage() {
     }
   }, [start]);
 
+  const checkingIdsRef = useRef(checkingIds);
+  useEffect(() => { checkingIdsRef.current = checkingIds; }, [checkingIds]);
+
   const handleStop = async () => {
     stop();
+    // Wait for all in-flight fact-checks to complete before navigating
+    await new Promise<void>((resolve) => {
+      const poll = () => {
+        if (checkingIdsRef.current.size === 0) return resolve();
+        setTimeout(poll, 200);
+      };
+      poll();
+    });
     try {
       await fetch(`${BACKEND_URL}/api/session/${sessionId}`, { method: "PATCH" });
     } catch {

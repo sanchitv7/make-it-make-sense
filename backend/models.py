@@ -12,7 +12,7 @@ class Verdict(str, Enum):
 
 class FactCheckRequest(BaseModel):
     claim_text: str
-    timestamp_seconds: int
+    timestamp_seconds: float
     session_id: str
     preset: str
     speaker_info: str | None = None
@@ -20,7 +20,7 @@ class FactCheckRequest(BaseModel):
 
 class FactCheckResponse(BaseModel):
     claim_text: str
-    timestamp_seconds: int
+    timestamp_seconds: float
     verdict: Verdict
     verdict_summary: str
     source_name: str | None = None
@@ -39,7 +39,7 @@ class CreateSessionResponse(BaseModel):
 class ClaimDetail(BaseModel):
     id: str
     claim_text: str
-    timestamp_seconds: int
+    timestamp_seconds: float
     verdict: Verdict
     verdict_summary: str | None = None
     source_name: str | None = None

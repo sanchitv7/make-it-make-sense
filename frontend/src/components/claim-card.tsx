@@ -17,7 +17,7 @@ const VERDICT_CONFIG: Record<Verdict, { icon: string; label: string; color: stri
 
 function formatTimestamp(seconds: number): string {
   const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
+  const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
@@ -40,7 +40,7 @@ export function ClaimCard({ claim, result, isChecking }: ClaimCardProps) {
         border: "1px solid var(--border-subtle)",
         background: "var(--bg-card)",
         padding: "16px 16px 16px 20px",
-        overflowX: "hidden",
+        overflow: "clip",
         transition: "border-color 0.5s ease",
       }}
     >
