@@ -1,7 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import type { Verdict } from "@/types";
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle, XCircle, AlertTriangle, HelpCircle, Square, Play, Pause, Radio } from 'lucide-react';
+import type { Verdict } from '@/types';
 
 interface TopBarProps {
   isConnected: boolean;
@@ -25,120 +27,169 @@ export function TopBar({
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    if (!isConnected || isPaused) return;
-    const base = Date.now() - elapsed * 1000;
-    const interval = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - base) / 1000));
-    }, 1000);
+    let interval: NodeJS.Timeout;
+    if (isConnected && !isPaused) {
+      interval = setInterval(() => {
+        setElapsed((prev) => prev + 1);
+      }, 1000);
+    }
     return () => clearInterval(interval);
   }, [isConnected, isPaused]);
 
-  const minutes = Math.floor(elapsed / 60);
-  const seconds = elapsed % 60;
-  const timeStr = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  useEffect(() => {
+    if (!isConnected) {
+      setElapsed(0);
+    }
+  }, [isConnected]);
 
-  const hasVerdicts =
-    verdictCounts.TRUE > 0 ||
-    verdictCounts.FALSE > 0 ||
-    verdictCounts.MISLEADING > 0 ||
-    verdictCounts.UNVERIFIED > 0;
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    return [hrs, mins, secs].map((v) => v.toString().padStart(2, '0')).join(':');
+  };
+
+  const hasVerdicts = Object.values(verdictCounts).some(count => count > 0);
 
   return (
-    <div
-      className="rounded-xl border mb-3"
-      style={{
-        background: "var(--bg-card)",
-        borderColor: "var(--border-subtle)",
-      }}
-    >
-      {/* Row 1: status + timer + buttons */}
-      <div className="flex items-center justify-between px-4 py-3">
-        {/* Left: connection dot + status + timer */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div
-              className={`w-2 h-2 rounded-full ${isConnected ? "animate-pulse" : ""}`}
-              style={{
-                background: isConnected
-                  ? "var(--accent-green)"
-                  : "var(--accent-red)",
-              }}
-            />
-            <span
-              className="text-xs font-mono uppercase tracking-wider"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              {!isConnected ? "Disconnected" : isPaused ? "Paused" : "Live"}
-            </span>
-          </div>
-          <span className="text-sm font-mono font-semibold">{timeStr}</span>
+    <header className='sticky top-0 z-50 w-full bg-[var(--bg-card)] border-t-[6px] border-b-2 border-[var(--border-active)]' style={{ borderRadius: 0 }}>
+      <div className='flex items-center justify-between px-4 py-3 md:px-6'>
+        <div className='flex items-baseline overflow-hidden'>
+          <h1
+            className='font-[family:var(--font-display)] font-black tracking-tighter text-[var(--text-primary)] leading-none select-none whitespace-nowrap'
+            style={{ fontSize: 'clamp(1.8rem, 4.5vw, 3rem)', borderRadius: 0 }}
+          >
+            <span className='hidden sm:inline'>MAKE IT MAKE SENSE</span>
+            <span className='sm:hidden'>M·I·M·S</span>
+          </h1>
         </div>
 
-        {/* Right: pause + stop buttons */}
-        <div className="flex items-center gap-2">
-          {isConnected && (
-            <button
+        <div className='flex items-center gap-4 md:gap-8'>
+          <div className='flex items-center gap-3 font-[family:var(--font-mono)] tabular-nums'>
+            <AnimatePresence mode='wait'>
+              {isConnected ? (
+                <motion.div
+                  key="connected"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className='flex items-center gap-3 text-xs md:text-sm font-bold'
+                >
+                  <div className='flex items-center gap-1.5'>
+                    <motion.div
+                      animate={isPaused ? { opacity: 1 } : { opacity: [1, 0.4, 1] }}
+                      transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                      className='flex items-center justify-center'
+                    >
+                      <Radio
+                        size={12}
+                        className={isPaused ? 'text-[var(--accent-amber)]' : 'text-[#B91C1C]'}
+                      />
+                    </motion.div>
+                    <span className={isPaused ? 'text-[var(--accent-amber)]' : 'text-[#B91C1C]'}>
+                      {isPaused ? 'PAUSED' : 'LIVE'}
+                    </span>
+                  </div>
+                  <span className='text-[var(--text-primary)] border-l border-[var(--border-subtle)] pl-3'>
+                    {formatTime(elapsed)}
+                  </span>
+                </motion.div>
+              ) : (
+                <motion.span
+                  key="offline"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className='text-[var(--text-muted)] text-xs uppercase tracking-widest font-bold'
+                >
+                  OFFLINE
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className='flex items-center gap-1 border-l border-[var(--border-active)] pl-4'>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
               onClick={isPaused ? onResume : onPause}
-              className="flex items-center justify-center px-5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer hover:brightness-110"
-              style={{
-                minHeight: "44px",
-                background: isPaused ? "var(--glow-green)" : "rgba(59,130,246,0.1)",
-                color: isPaused ? "var(--accent-green)" : "var(--accent-blue)",
-                border: `1px solid ${isPaused ? "rgba(34,197,94,0.3)" : "rgba(59,130,246,0.3)"}`,
-              }}
+              disabled={!isConnected}
+              className='p-2 text-[var(--text-secondary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-card)] transition-colors border border-[var(--border-active)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer'
+              aria-label={isPaused ? 'Resume' : 'Pause'}
+              style={{ borderRadius: 0 }}
             >
-              {isPaused ? "Resume" : "Pause"}
-            </button>
-          )}
-          <button
-            onClick={onStop}
-            className="flex items-center justify-center px-5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer hover:brightness-110"
-            style={{
-              minHeight: "44px",
-              background: "var(--glow-red)",
-              color: "var(--accent-red)",
-              border: "1px solid rgba(239,68,68,0.3)",
-            }}
-          >
-            Stop
-          </button>
+              {isPaused ? <Play size={16} strokeWidth={2} /> : <Pause size={16} strokeWidth={2} />}
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={onStop}
+              className='flex items-center gap-1.5 px-3 py-2 font-[family:var(--font-mono)] text-xs tracking-widest uppercase text-white cursor-pointer'
+              aria-label='End Session'
+              style={{ borderRadius: 0, backgroundColor: '#B91C1C' }}
+            >
+              <Square size={14} strokeWidth={2} />
+              <span>END</span>
+            </motion.button>
+          </div>
         </div>
       </div>
 
-      {/* Row 2: verdict pills (only when there are verdicts) */}
-      {hasVerdicts && (
-        <div
-          className="flex items-center gap-2 px-4 pb-3 flex-wrap"
-          style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}
-        >
-          <span
-            className="text-xs font-mono"
-            style={{ color: "var(--text-muted)" }}
+      <AnimatePresence>
+        {isConnected && hasVerdicts && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className='overflow-hidden border-t border-[var(--border-subtle)]'
           >
-            {totalClaims} claim{totalClaims !== 1 ? "s" : ""}
-          </span>
-          {verdictCounts.TRUE > 0 && (
-            <span className="verdict-true text-xs px-2 py-0.5 rounded border font-mono">
-              {verdictCounts.TRUE} ✓ True
-            </span>
-          )}
-          {verdictCounts.FALSE > 0 && (
-            <span className="verdict-false text-xs px-2 py-0.5 rounded border font-mono">
-              {verdictCounts.FALSE} ✗ False
-            </span>
-          )}
-          {verdictCounts.MISLEADING > 0 && (
-            <span className="verdict-misleading text-xs px-2 py-0.5 rounded border font-mono">
-              {verdictCounts.MISLEADING} ⚠ Misleading
-            </span>
-          )}
-          {verdictCounts.UNVERIFIED > 0 && (
-            <span className="verdict-unverified text-xs px-2 py-0.5 rounded border font-mono">
-              {verdictCounts.UNVERIFIED} ? Unverified
-            </span>
-          )}
-        </div>
-      )}
-    </div>
+            <div className='flex divide-x divide-[var(--border-subtle)] text-[10px] md:text-xs font-[family:var(--font-mono)] uppercase tracking-tighter md:tracking-widest text-[var(--text-secondary)]'>
+              <div
+                className='px-3 py-1.5 flex items-center gap-2 font-black text-[var(--bg-card)]'
+                style={{ backgroundColor: 'var(--text-primary)', borderRadius: 0 }}
+              >
+                VERDICTS
+              </div>
+              <div className='px-3 py-1.5 flex items-center gap-2 flex-1 sm:flex-none'>
+                <span className='text-[var(--text-muted)]'>CLAIMS:</span>
+                <motion.span
+                  key={totalClaims}
+                  initial={{ opacity: 0.5 }}
+                  animate={{ opacity: 1 }}
+                  className='text-[var(--text-primary)] font-bold'
+                >
+                  {totalClaims}
+                </motion.span>
+              </div>
+              <div className='px-3 py-1.5 flex items-center gap-2'>
+                <CheckCircle size={13} className='text-[var(--accent-green)]' />
+                <span className='hidden md:inline text-[var(--text-muted)]'>TRUE:</span>
+                <motion.span key={verdictCounts.TRUE} initial={{ scale: 1.2 }} animate={{ scale: 1 }} className='text-[var(--text-primary)] font-bold'>
+                  {verdictCounts.TRUE}
+                </motion.span>
+              </div>
+              <div className='px-3 py-1.5 flex items-center gap-2'>
+                <XCircle size={13} style={{ color: '#B91C1C' }} />
+                <span className='hidden md:inline text-[var(--text-muted)]'>FALSE:</span>
+                <motion.span key={verdictCounts.FALSE} initial={{ scale: 1.2 }} animate={{ scale: 1 }} className='text-[var(--text-primary)] font-bold'>
+                  {verdictCounts.FALSE}
+                </motion.span>
+              </div>
+              <div className='px-3 py-1.5 flex items-center gap-2'>
+                <AlertTriangle size={13} className='text-[var(--accent-amber)]' />
+                <span className='hidden md:inline text-[var(--text-muted)]'>MISLEADING:</span>
+                <motion.span key={verdictCounts.MISLEADING} initial={{ scale: 1.2 }} animate={{ scale: 1 }} className='text-[var(--text-primary)] font-bold'>
+                  {verdictCounts.MISLEADING}
+                </motion.span>
+              </div>
+              <div className='px-3 py-1.5 flex items-center gap-2'>
+                <HelpCircle size={13} className='text-[var(--text-muted)]' />
+                <span className='hidden md:inline text-[var(--text-muted)]'>UNVERIFIED:</span>
+                <motion.span key={verdictCounts.UNVERIFIED} initial={{ scale: 1.2 }} animate={{ scale: 1 }} className='text-[var(--text-primary)] font-bold'>
+                  {verdictCounts.UNVERIFIED}
+                </motion.span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </header>
   );
 }

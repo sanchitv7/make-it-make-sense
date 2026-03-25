@@ -28,13 +28,15 @@ PROMPTS = {
 - Reported events and their details (locations, casualties, outcomes)
 - Organizational claims (company actions, government decisions)"""
     ),
-    "earnings": CLAIM_DETECTION_BASE.format(
-        claim_types="""- Revenue and profit figures
-- Growth percentages (YoY, QoQ)
-- Market share claims
-- Product and user metrics (DAU, MAU, conversion rates)
-- Forward guidance numbers
-- Comparison claims (vs competitors, vs previous periods)"""
+    "general": CLAIM_DETECTION_BASE.format(
+        claim_types="""- Statistics and numerical claims
+- Historical events and dates
+- Scientific claims (studies, research findings)
+- Geographic and demographic facts
+- Attribution claims (who said what, who discovered what)
+- Health and medical claims
+- Legal and policy facts
+- Economic and business figures"""
     ),
     "podcast": CLAIM_DETECTION_BASE.format(
         claim_types="""- Statistics and numerical claims
@@ -51,6 +53,8 @@ FACT_CHECK_PROMPT = """You are a rigorous fact-checker covering any topic global
 Claim: "{claim_text}"
 {speaker_context}
 
+IMPORTANT: If a speaker/context is provided above, resolve all first-person pronouns in the claim to that speaker. For example, if the context is "Donald Trump speaking at the State of the Union" and the claim says "I have brought down grocery prices", treat this as a claim made BY Donald Trump about actions taken during his presidency — not by any other person.
+
 Use the google_search tool to find authoritative sources that confirm or deny this claim.
 
 After searching, provide your verdict as one of:
@@ -60,14 +64,14 @@ After searching, provide your verdict as one of:
 - UNVERIFIED: Cannot find sufficient reliable sources to verify
 
 Respond in this exact JSON format:
-{{
+{
   "verdict": "TRUE|FALSE|MISLEADING|UNVERIFIED",
   "verdict_summary": "A concise 1-2 sentence explanation of why this verdict was given",
   "source_name": "Name of the primary source (e.g., 'Reuters', 'The Hindu', 'NHK')",
   "source_url": "URL of the primary source",
   "source_credibility": 4,
   "credibility_reason": "One sentence explaining why this source is credible"
-}}
+}
 
 Source credibility scale (1-5):
 5 - Government body, intergovernmental org (UN, WHO, World Bank, IMF), official statistical agency

@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from fact_check import fact_check_claim
+from fact_check import fact_check_claim, init_pool
 from models import (
     FactCheckRequest,
     FactCheckResponse,
@@ -32,6 +32,11 @@ app = FastAPI(title="Make It Make Sense", version="0.1.0")
 _cors_origins = ["http://localhost:3000"]
 if _extra := os.environ.get("ALLOWED_ORIGINS"):
     _cors_origins.extend(o.strip() for o in _extra.split(",") if o.strip())
+
+@app.on_event("startup")
+async def startup():
+    await init_pool()
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -82,7 +87,8 @@ async def live_ws(websocket: WebSocket, preset: str = Query(default="podcast")):
         input_audio_transcription=types.AudioTranscriptionConfig(),
         realtime_input_config=types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(
-                silence_duration_ms=2000,
+                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
+                silence_duration_ms=500,
             ),
             turn_coverage=types.TurnCoverage.TURN_INCLUDES_ALL_INPUT,
         ),
@@ -170,18 +176,19 @@ async def check_fact(request: FactCheckRequest):
                 {
                     "session_id": request.session_id,
                     "claim_text": request.claim_text,
-                    "timestamp_seconds": request.timestamp_seconds,
+                    "timestamp_seconds": int(request.timestamp_seconds or 0),
                     "verdict": result.verdict.value,
                     "verdict_summary": result.verdict_summary,
                     "source_name": result.source_name,
                     "source_url": result.source_url,
                 }
             )
-        except Exception:
-            pass
+        except Exception as db_err:
+            logger.error("Failed to persist claim to Supabase: %s", db_err)
 
         return result
     except Exception as e:
+        logger.error("Fact-check endpoint error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

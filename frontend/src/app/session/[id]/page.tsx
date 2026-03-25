@@ -18,11 +18,12 @@ export default function SessionPage() {
   const router = useRouter();
   const sessionId = params.id as string;
   const preset = (searchParams.get("preset") || "podcast") as ContextPreset;
+  const contextDetail = searchParams.get("context") || undefined;
 
   const [claims, setClaims] = useState<DetectedClaim[]>([]);
   const startedRef = useRef(false);
 
-  const { verdicts, checkingIds, checkClaim } = useFactCheck({ sessionId, preset });
+  const { verdicts, checkingIds, checkClaim } = useFactCheck({ sessionId, preset, speakerInfo: contextDetail });
 
   const onClaim = useCallback(
     (claim: DetectedClaim) => {
@@ -71,21 +72,21 @@ export default function SessionPage() {
 
   return (
     <div
-      className="flex flex-col px-4 pt-4 pb-2"
-      style={{ height: "100dvh" }}
+      className="flex flex-col"
+      style={{ height: "100dvh", backgroundColor: "var(--bg-primary)" }}
     >
-      <div className="w-full mx-auto flex flex-col h-full" style={{ maxWidth: "512px" }}>
-        <TopBar
-          isConnected={isConnected}
-          isPaused={isPaused}
-          verdictCounts={verdictCounts}
-          totalClaims={claims.length}
-          onPause={pause}
-          onResume={resume}
-          onStop={handleStop}
-        />
+      <TopBar
+        isConnected={isConnected}
+        isPaused={isPaused}
+        verdictCounts={verdictCounts}
+        totalClaims={claims.length}
+        onPause={pause}
+        onResume={resume}
+        onStop={handleStop}
+      />
+      <div className="w-full mx-auto flex flex-col flex-1 min-h-0 px-6 md:px-12 py-8 max-w-[900px]">
         <ListeningIndicator isConnected={isConnected} isPaused={isPaused} />
-        <div className="flex-1 min-h-0 h-full">
+        <div className="flex-1 min-h-0 mt-6">
           <VerdictFeed
             claims={claims}
             verdicts={verdicts}
