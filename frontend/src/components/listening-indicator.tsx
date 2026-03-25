@@ -1,92 +1,72 @@
-"use client";
+'use client';
+
+import React from 'react';
+import { motion, type TargetAndTransition } from 'framer-motion';
 
 interface ListeningIndicatorProps {
   isConnected: boolean;
   isPaused: boolean;
 }
 
-const BAR_HEIGHTS = [0.4, 0.6, 1, 0.7, 0.9, 0.5, 0.8, 1, 0.6, 0.9, 0.5, 0.7, 1, 0.4];
+export function ListeningIndicator({
+  isConnected,
+  isPaused,
+}: ListeningIndicatorProps) {
+  const getLineStyles = (): { color: string; opacity: number; animate: TargetAndTransition; backgroundImage?: string; backgroundSize?: string } => {
+    if (!isConnected) {
+      return { color: 'var(--text-muted)', opacity: 0.3, animate: {} };
+    }
+    if (isPaused) {
+      return { color: 'var(--accent-amber)', opacity: 0.5, animate: {} };
+    }
+    return {
+      color: 'var(--accent-red)',
+      opacity: 1,
+      animate: {
+        backgroundPosition: ['0% 50%', '200% 50%'],
+        transition: { duration: 3, repeat: Infinity, ease: 'linear' },
+      },
+      backgroundImage: `linear-gradient(90deg, transparent, rgba(139, 26, 43, 1), rgba(139, 26, 43, 0.8), transparent)`,
+      backgroundSize: '200% 100%',
+    };
+  };
 
-export function ListeningIndicator({ isConnected, isPaused }: ListeningIndicatorProps) {
-  const isLive = isConnected && !isPaused;
+  const getStatusText = () => {
+    if (!isConnected) return 'CONNECTING...';
+    if (isPaused) return 'PAUSED';
+    return 'LISTENING';
+  };
 
-  const barColor = isPaused
-    ? "var(--accent-amber)"
-    : isConnected
-    ? "var(--accent-blue)"
-    : "var(--border-active)";
-
-  const statusText = isPaused
-    ? "Paused"
-    : isConnected
-    ? "Listening…"
-    : "Connecting…";
+  const styles = getLineStyles();
 
   return (
-    <>
-      <style>{`
-        @keyframes bar-pulse {
-          0%, 100% { opacity: 0.5; transform: scaleY(0.6); }
-          50% { opacity: 1; transform: scaleY(1); }
-        }
-      `}</style>
-
-      <div
-        style={{
-          borderRadius: "16px",
-          border: "1px solid var(--border-subtle)",
-          background: "var(--bg-card)",
-          padding: "16px 24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "column",
-          gap: "12px",
-          flexShrink: 0,
-          marginBottom: "12px",
-        }}
-      >
-        {/* Waveform bars */}
-        <div
+    <div className="w-full py-4 flex flex-col items-center justify-center gap-2">
+      <div className="w-full relative bg-[var(--border-subtle)] overflow-hidden" style={{ height: '3px' }}>
+        <motion.div
+          className="absolute inset-0 w-full h-full"
+          initial={false}
+          animate={styles.animate}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "3px",
-            height: "32px",
+            backgroundColor: styles.backgroundImage ? undefined : styles.color,
+            backgroundImage: styles.backgroundImage,
+            backgroundSize: styles.backgroundSize,
+            opacity: styles.opacity,
           }}
-        >
-          {BAR_HEIGHTS.map((h, i) => (
-            <div
-              key={i}
-              style={{
-                width: "3px",
-                height: `${h * 32}px`,
-                borderRadius: "2px",
-                background: barColor,
-                opacity: isConnected ? 1 : 0.3,
-                transformOrigin: "center",
-                animation: isLive
-                  ? `bar-pulse ${0.7 + i * 0.08}s ease-in-out ${i * 0.06}s infinite`
-                  : "none",
-                transition: "background 0.4s ease, opacity 0.4s ease",
-              }}
-            />
-          ))}
-        </div>
+        />
+      </div>
 
-        {/* Status label */}
-        <span
-          style={{
-            fontFamily: "var(--font-mono), monospace",
-            fontSize: "0.65rem",
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: "var(--text-muted)",
-          }}
-        >
-          {statusText}
+      <div className="flex items-center gap-2">
+        {!isPaused && isConnected && (
+          <motion.span
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent-red)', flexShrink: 0 }}
+          />
+        )}
+        <span className="font-[family:var(--font-mono)] text-xs tracking-[0.2em] text-[var(--text-secondary)] uppercase">
+          {getStatusText()}
         </span>
       </div>
-    </>
+    </div>
   );
 }

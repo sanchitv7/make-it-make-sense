@@ -50,5 +50,5 @@ def end_session(session_id: str) -> None:
 
 
 def upsert_claim(claim_data: dict) -> dict:
-    result = get_client().table("claims").upsert(claim_data).execute()
+    result = get_client().table("claims").insert(claim_data).execute()
     return result.data[0]

@@ -9,6 +9,7 @@ const BACKEND_URL =
 interface UseFactCheckOptions {
   sessionId: string;
   preset: ContextPreset;
+  speakerInfo?: string;
 }
 
 interface UseFactCheckReturn {
@@ -20,6 +21,7 @@ interface UseFactCheckReturn {
 export function useFactCheck({
   sessionId,
   preset,
+  speakerInfo,
 }: UseFactCheckOptions): UseFactCheckReturn {
   const [verdicts, setVerdicts] = useState<FactCheckResult[]>([]);
   const [checkingIds, setCheckingIds] = useState<Set<string>>(new Set());
@@ -41,6 +43,7 @@ export function useFactCheck({
           timestamp_seconds: claim.timestamp_seconds,
           session_id: sessionId,
           preset: preset,
+          speaker_info: speakerInfo ?? null,
         }),
       })
         .then((res) => {
@@ -76,7 +79,7 @@ export function useFactCheck({
           });
         });
     },
-    [sessionId, preset]
+    [sessionId, preset, speakerInfo]
   );
 
   return { verdicts, checkingIds, checkClaim };

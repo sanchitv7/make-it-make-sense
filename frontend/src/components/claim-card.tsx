@@ -1,6 +1,8 @@
-"use client";
+'use client';
 
-import type { DetectedClaim, FactCheckResult, Verdict } from "@/types";
+import type { DetectedClaim, FactCheckResult, Verdict } from '@/types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle, XCircle, AlertTriangle, HelpCircle, ExternalLink, Quote } from 'lucide-react';
 
 interface ClaimCardProps {
   claim: DetectedClaim;
@@ -8,171 +10,167 @@ interface ClaimCardProps {
   isChecking: boolean;
 }
 
-const VERDICT_CONFIG: Record<Verdict, { icon: string; label: string; color: string; glow: string }> = {
-  TRUE:       { icon: "✓", label: "True",       color: "var(--accent-green)", glow: "var(--glow-green)" },
-  FALSE:      { icon: "✗", label: "False",      color: "var(--accent-red)",   glow: "var(--glow-red)"   },
-  MISLEADING: { icon: "⚠", label: "Misleading", color: "var(--accent-amber)", glow: "var(--glow-amber)" },
-  UNVERIFIED: { icon: "?", label: "Unverified", color: "var(--accent-zinc)",  glow: "rgba(113,113,122,0.1)" },
+const VERDICT_CONFIG: Record<Verdict, { color: string; bg: string; icon: React.ReactNode; label: string; className: string }> = {
+  TRUE:       { color: 'var(--accent-green)', bg: 'rgba(52,211,153,0.15)',  icon: <CheckCircle  size={16} strokeWidth={2} />, label: 'TRUE',       className: 'verdict-true'       },
+  FALSE:      { color: '#B91C1C',             bg: 'rgba(185,28,28,0.1)',   icon: <XCircle      size={16} strokeWidth={2} />, label: 'FALSE',      className: 'verdict-false'      },
+  MISLEADING: { color: 'var(--accent-amber)', bg: 'rgba(251,191,36,0.15)', icon: <AlertTriangle size={16} strokeWidth={2} />, label: 'MISLEADING', className: 'verdict-misleading' },
+  UNVERIFIED: { color: 'var(--accent-zinc)',  bg: 'rgba(107,114,128,0.15)',icon: <HelpCircle   size={16} strokeWidth={2} />, label: 'UNVERIFIED',  className: 'verdict-unverified' },
 };
 
-function formatTimestamp(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
+const formatTimestamp = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
 
 export function ClaimCard({ claim, result, isChecking }: ClaimCardProps) {
-  const cfg = result ? VERDICT_CONFIG[result.verdict] : null;
-
-  // Left accent bar color
-  const accentColor = cfg
-    ? cfg.color
-    : isChecking
-    ? "var(--accent-blue)"
-    : "var(--border-active)";
+  const config = result ? VERDICT_CONFIG[result.verdict] : null;
+  const accentColor = config ? config.color : isChecking ? 'var(--accent-blue)' : 'var(--border-active)';
 
   return (
-    <div
-      className="animate-slide-in-up"
-      style={{
-        position: "relative",
-        borderRadius: "12px",
-        border: "1px solid var(--border-subtle)",
-        background: "var(--bg-card)",
-        padding: "16px 16px 16px 20px",
-        overflow: "clip",
-        transition: "border-color 0.5s ease",
-      }}
+    <motion.div
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="relative w-full"
     >
-      {/* Left accent bar */}
       <div
+        className="relative overflow-hidden"
         style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: "4px",
-          background: accentColor,
-          borderRadius: "12px 0 0 12px",
-          transition: "background 0.5s ease",
-          animation: isChecking && !result
-            ? "accent-pulse 2s ease-in-out infinite"
-            : "none",
-        }}
-      />
-
-      {/* Header row: verdict badge (when resolved) + timestamp */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: cfg ? "space-between" : "flex-end",
-          marginBottom: "10px",
-          minHeight: "22px",
+          backgroundColor: 'var(--bg-card)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 0,
+          padding: 'clamp(16px, 4vw, 28px) clamp(16px, 4vw, 28px) clamp(16px, 4vw, 28px) clamp(24px, 5vw, 40px)',
+          boxShadow: 'var(--card-shadow)',
         }}
       >
-        {cfg && (
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "5px",
-              padding: "3px 10px",
-              borderRadius: "6px",
-              fontSize: "0.7rem",
-              fontWeight: 700,
-              fontFamily: "var(--font-mono), monospace",
-              letterSpacing: "0.06em",
-              color: cfg.color,
-              background: cfg.glow,
-              border: `1px solid ${cfg.color}44`,
-              animation: "fade-in 0.3s ease forwards",
-            }}
-          >
-            <span>{cfg.icon}</span>
-            {cfg.label}
-          </span>
-        )}
+        {/* Left Accent Bar */}
+        <motion.div
+          animate={{ backgroundColor: accentColor }}
+          transition={{ duration: 0.4 }}
+          className="absolute left-0 top-0 bottom-0"
+          style={{ width: '3px' }}
+        />
 
-        <span
-          style={{
-            fontSize: "0.68rem",
-            fontFamily: "var(--font-mono), monospace",
-            color: "var(--text-muted)",
-          }}
-        >
-          {formatTimestamp(claim.timestamp_seconds)}
-        </span>
-      </div>
+        {/* Content */}
+        <div className="relative flex flex-col gap-4" style={{ zIndex: 1 }}>
+          {/* Top row: quote icon (left) + timestamp (right) */}
+          <div className="flex items-start justify-between">
+            <span className="pointer-events-none select-none" style={{ color: 'var(--accent-gold)', opacity: 0.4 }}>
+              <Quote size={32} strokeWidth={1.5} style={{ transform: 'scaleX(-1)' }} />
+            </span>
+            <div className="font-[family:var(--font-mono)] text-[var(--text-muted)]" style={{ fontSize: '0.65rem' }}>
+              {formatTimestamp(claim.timestamp_seconds)}
+            </div>
+          </div>
 
-      {/* Claim quote */}
-      <p
-        style={{
-          fontSize: "0.95rem",
-          fontWeight: 500,
-          lineHeight: 1.5,
-          color: "var(--text-primary)",
-          marginBottom: isChecking || result ? "12px" : 0,
-        }}
-      >
-        &ldquo;{claim.claim_text}&rdquo;
-      </p>
-
-      {/* Phase 2: shimmer skeleton */}
-      {isChecking && !result && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <div className="shimmer-line" style={{ height: "10px", width: "92%" }} />
-          <div className="shimmer-line" style={{ height: "10px", width: "70%" }} />
-        </div>
-      )}
-
-      {/* Phase 3: verdict rationale + source */}
-      {result && (
-        <div style={{ animation: "fade-in 0.4s ease forwards" }}>
+          {/* Claim Text */}
           <p
-            style={{
-              fontSize: "0.82rem",
-              lineHeight: 1.55,
-              color: "var(--text-secondary)",
-              marginBottom: result.source_url ? "10px" : 0,
-            }}
+            className="font-[family:var(--font-display)] text-[var(--text-primary)]"
+            style={{ fontStyle: 'italic', fontSize: 'clamp(1.1rem, 3.5vw, 1.45rem)', lineHeight: 1.6 }}
           >
-            {result.verdict_summary}
+            &#x201C;{claim.claim_text}&#x201D;
           </p>
 
-          {result.source_url && (
-            <a
-              href={result.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                fontSize: "0.72rem",
-                fontFamily: "var(--font-mono), monospace",
-                color: "var(--accent-blue)",
-                textDecoration: "none",
-                padding: "4px 0",
-              }}
-            >
-              <span>↗</span>
-              {result.source_name || "Source"}
-            </a>
-          )}
-        </div>
-      )}
+          {/* Bottom: summary/source + verdict badge bottom-right */}
+          <AnimatePresence mode="wait">
+            {result ? (
+              <motion.div
+                key="result"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="flex flex-col gap-2"
+              >
+                {result.verdict_summary && (
+                  <p
+                    className="font-[family:var(--font-body)] text-[var(--text-secondary)]"
+                    style={{ fontSize: '1rem', lineHeight: 1.65 }}
+                  >
+                    {result.verdict_summary}
+                  </p>
+                )}
 
-      <style>{`
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(4px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes accent-pulse {
-          0%, 100% { opacity: 0.5; }
-          50% { opacity: 1; }
-        }
-      `}</style>
-    </div>
+                <div className="flex items-center justify-between gap-4 mt-1">
+                  {result.source_name ? (
+                    <a
+                      href={result.source_url || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 hover:underline underline-offset-2 font-[family:var(--font-mono)]"
+                      style={{ color: 'var(--accent-blue)', fontSize: '0.8rem' }}
+                    >
+                      <ExternalLink size={14} strokeWidth={2} />
+                      {result.source_name}
+                    </a>
+                  ) : <span />}
+
+                  {/* Verdict badge — prominent bottom-right */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 font-[family:var(--font-mono)] uppercase font-bold ${config!.className}`}
+                    style={{ borderRadius: 0, fontSize: '0.8rem', letterSpacing: '0.15em' }}
+                  >
+                    {config!.icon}
+                    {config!.label}
+                  </motion.div>
+                </div>
+              </motion.div>
+            ) : isChecking ? (
+              <motion.div
+                key="checking"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col gap-2"
+              >
+                {/* Skeleton lines */}
+                {[100, 85, 60].map((widthPct, i) => (
+                  <motion.div
+                    key={i}
+                    animate={{ opacity: [0.25, 0.6, 0.25] }}
+                    transition={{ repeat: Infinity, duration: 1.6, delay: i * 0.15, ease: 'easeInOut' }}
+                    style={{
+                      height: '8px',
+                      width: `${widthPct}%`,
+                      backgroundColor: 'var(--border-active)',
+                      borderRadius: 0,
+                    }}
+                  />
+                ))}
+                {/* Verifying label */}
+                <div className="flex items-center gap-2.5 mt-3">
+                  <motion.span
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                    style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: 'var(--accent-red)', display: 'inline-block', flexShrink: 0 }}
+                  />
+                  <motion.span
+                    className="font-[family:var(--font-mono)] uppercase tracking-widest"
+                    animate={{ backgroundPosition: ['200% center', '-200% center'] }}
+                    transition={{ repeat: Infinity, duration: 2.4, ease: 'linear' }}
+                    style={{
+                      fontSize: '0.9rem',
+                      background: 'linear-gradient(90deg, var(--text-muted) 20%, var(--accent-gold) 50%, var(--text-muted) 80%)',
+                      backgroundSize: '200% auto',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                      backgroundPosition: '200% center',
+                    }}
+                  >
+                    Verifying…
+                  </motion.span>
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+      </div>
+    </motion.div>
   );
 }

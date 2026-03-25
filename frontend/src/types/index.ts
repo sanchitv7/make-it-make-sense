@@ -1,4 +1,4 @@
-export type ContextPreset = "political" | "news" | "earnings" | "podcast";
+export type ContextPreset = "political" | "news" | "general" | "podcast";
 
 export type Verdict = "TRUE" | "FALSE" | "MISLEADING" | "UNVERIFIED";
 
