@@ -90,7 +90,7 @@ export function TopBar({
                       {isPaused ? 'PAUSED' : 'LIVE'}
                     </span>
                   </div>
-                  <span className='text-[var(--text-primary)] border-l border-[var(--border-subtle)] pl-3 inline-block w-[5.5ch]'>
+                  <span className='text-[var(--text-primary)] border-l border-[var(--border-subtle)] pl-3'>
                     {formatTime(elapsed)}
                   </span>
                 </motion.div>

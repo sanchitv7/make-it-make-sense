@@ -1,10 +1,7 @@
 import asyncio
 import json
-import logging
 import os
 import re
-
-logger = logging.getLogger(__name__)
 
 from google import genai
 from google.genai import types
@@ -45,28 +42,41 @@ async def fact_check_claim(
         await _client_pool.put(client)
 
 
-_QUOTA_EXHAUSTED = object()  # sentinel
+async def _do_fact_check(
+    client: genai.Client,
+    claim_text: str,
+    preset: str,
+    speaker_info: str | None = None,
+) -> FactCheckResponse:
 
+    speaker_context = f"Speaker/Context: {speaker_info}" if speaker_info else ""
 
-async def _call_model(client: genai.Client, model: str, prompt: str):
-    """Call a single model. Returns the response, or _QUOTA_EXHAUSTED sentinel on 429."""
+    # Use replace instead of .format() to avoid KeyError when claim_text contains braces
+    prompt = (
+        FACT_CHECK_PROMPT
+        .replace("{claim_text}", claim_text)
+        .replace("{speaker_context}", speaker_context)
+    )
+
     try:
-        return await client.aio.models.generate_content(
-            model=model,
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 tools=[types.Tool(google_search=types.GoogleSearch())],
             ),
         )
     except ClientError as e:
-        if e.code == 429 or (e.status and "RESOURCE_EXHAUSTED" in e.status):
-            logger.warning("Quota exhausted for %s: %s", model, e.message)
-            return _QUOTA_EXHAUSTED
+        if e.code == 429:
+            return FactCheckResponse(
+                claim_text=claim_text,
+                timestamp_seconds=0,
+                verdict=Verdict.UNVERIFIED,
+                verdict_summary="Fact-check quota exceeded — please try again later.",
+            )
         raise
 
-
-def _parse_response(response, claim_text: str) -> FactCheckResponse:
-    """Parse a Gemini generate_content response into a FactCheckResponse."""
+    # Collect text across all candidates/parts (model may stream multiple turns)
     raw = ""
     if response.text:
         raw = response.text
@@ -77,7 +87,9 @@ def _parse_response(response, claim_text: str) -> FactCheckResponse:
                     if hasattr(part, "text") and part.text:
                         raw += part.text
 
+    # Extract JSON object — use the last match to skip any preamble text
     matches = list(re.finditer(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}", raw, re.DOTALL))
+    # Fall back to greedy match if structured match fails
     if not matches:
         matches = list(re.finditer(r"\{.*\}", raw, re.DOTALL))
     try:
@@ -90,16 +102,19 @@ def _parse_response(response, claim_text: str) -> FactCheckResponse:
             verdict_summary="Failed to parse fact-check response",
         )
 
+    # Prefer grounding URL (from Google Search), fall back to model-provided URL
     metadata = response.candidates[0].grounding_metadata if response.candidates else None
     source_url = _first_grounding_url(metadata) or result.get("source_url") or ""
     source_name = result.get("source_name")
 
+    # Check credibility score from the model
     credibility = result.get("source_credibility", 0)
     try:
         credibility = int(credibility)
     except (TypeError, ValueError):
         credibility = 0
 
+    # Reject if no source, blocked domain, or credibility too low
     if not source_url or is_blocked_url(source_url) or credibility < 3:
         return FactCheckResponse(
             claim_text=claim_text,
@@ -122,38 +137,3 @@ def _parse_response(response, claim_text: str) -> FactCheckResponse:
         source_name=source_name,
         source_url=source_url,
     )
-
-
-async def _do_fact_check(
-    client: genai.Client,
-    claim_text: str,
-    preset: str,
-    speaker_info: str | None = None,
-) -> FactCheckResponse:
-
-    speaker_context = f"Speaker/Context: {speaker_info}" if speaker_info else ""
-    prompt = (
-        FACT_CHECK_PROMPT
-        .replace("{claim_text}", claim_text)
-        .replace("{speaker_context}", speaker_context)
-    )
-
-    # Fire both models in parallel; prefer 2.5-flash, fall back to 2.0-flash on quota error.
-    task_25 = asyncio.create_task(_call_model(client, "gemini-2.5-flash", prompt))
-    task_20 = asyncio.create_task(_call_model(client, "gemini-2.0-flash", prompt))
-
-    resp_25 = await task_25
-    if resp_25 is not _QUOTA_EXHAUSTED:
-        task_20.cancel()
-        return _parse_response(resp_25, claim_text)
-
-    logger.info("gemini-2.5-flash quota exhausted, using gemini-2.0-flash result")
-    resp_20 = await task_20
-    if resp_20 is _QUOTA_EXHAUSTED:
-        return FactCheckResponse(
-            claim_text=claim_text,
-            timestamp_seconds=0,
-            verdict=Verdict.UNVERIFIED,
-            verdict_summary="Fact-check quota exceeded — please try again later.",
-        )
-    return _parse_response(resp_20, claim_text)
