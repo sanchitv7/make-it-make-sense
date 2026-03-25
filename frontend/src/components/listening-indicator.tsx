@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { motion, type TargetAndTransition } from 'framer-motion';
 
 interface ListeningIndicatorProps {
@@ -12,12 +11,12 @@ export function ListeningIndicator({
   isConnected,
   isPaused,
 }: ListeningIndicatorProps) {
-  const getLineStyles = (): { color: string; opacity: number; animate: TargetAndTransition; backgroundImage?: string; backgroundSize?: string } => {
+  const getLineStyles = (): { color: string; opacity: number; animate: TargetAndTransition; backgroundImage?: string; backgroundSize?: string; glow?: string } => {
     if (!isConnected) {
       return { color: 'var(--text-muted)', opacity: 0.3, animate: {} };
     }
     if (isPaused) {
-      return { color: 'var(--accent-amber)', opacity: 0.5, animate: {} };
+      return { color: 'var(--accent-amber)', opacity: 0.6, animate: {}, glow: '0 0 8px rgba(251,191,36,0.4)' };
     }
     return {
       color: 'var(--accent-red)',
@@ -26,22 +25,22 @@ export function ListeningIndicator({
         backgroundPosition: ['0% 50%', '200% 50%'],
         transition: { duration: 3, repeat: Infinity, ease: 'linear' },
       },
-      backgroundImage: `linear-gradient(90deg, transparent, rgba(139, 26, 43, 1), rgba(139, 26, 43, 0.8), transparent)`,
+      backgroundImage: `linear-gradient(90deg, transparent, rgba(185, 28, 28, 1), rgba(185, 28, 28, 0.9), transparent)`,
       backgroundSize: '200% 100%',
+      glow: '0 0 10px rgba(185,28,28,0.5)',
     };
-  };
-
-  const getStatusText = () => {
-    if (!isConnected) return 'CONNECTING...';
-    if (isPaused) return 'PAUSED';
-    return 'LISTENING';
   };
 
   const styles = getLineStyles();
 
   return (
-    <div className="w-full py-4 flex flex-col items-center justify-center gap-2">
-      <div className="w-full relative bg-[var(--border-subtle)] overflow-hidden" style={{ height: '3px' }}>
+    <div className="w-full">
+      <motion.div
+        className="w-full relative bg-[var(--border-active)] overflow-hidden"
+        animate={{ boxShadow: styles.glow || 'none' }}
+        transition={{ duration: 0.4 }}
+        style={{ height: '3px' }}
+      >
         <motion.div
           className="absolute inset-0 w-full h-full"
           initial={false}
@@ -53,20 +52,7 @@ export function ListeningIndicator({
             opacity: styles.opacity,
           }}
         />
-      </div>
-
-      <div className="flex items-center gap-2">
-        {!isPaused && isConnected && (
-          <motion.span
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--accent-red)', flexShrink: 0 }}
-          />
-        )}
-        <span className="font-[family:var(--font-mono)] text-xs tracking-[0.2em] text-[var(--text-secondary)] uppercase">
-          {getStatusText()}
-        </span>
-      </div>
+      </motion.div>
     </div>
   );
 }

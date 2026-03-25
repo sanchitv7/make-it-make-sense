@@ -10,6 +10,16 @@ cd backend && source .venv/bin/activate && uvicorn main:app --reload
 ```
 Dependencies: `cd backend && uv pip install -r requirements.txt`
 
+Environment: copy `backend/.env.example` → `backend/.env` and fill in:
+- `GEMINI_API_KEY` — Gemini API key
+- `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` — from Supabase dashboard
+- `ALLOWED_ORIGINS` — set to `http://localhost:3000` for local dev
+
+Tests:
+```bash
+cd backend && source .venv/bin/activate && python test_claims.py
+```
+
 ### Frontend
 ```bash
 cd frontend && npm run dev      # dev server

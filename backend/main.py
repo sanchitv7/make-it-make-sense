@@ -88,7 +88,7 @@ async def live_ws(websocket: WebSocket, preset: str = Query(default="podcast")):
         realtime_input_config=types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(
                 end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
-                silence_duration_ms=500,
+                silence_duration_ms=200,
             ),
             turn_coverage=types.TurnCoverage.TURN_INCLUDES_ALL_INPUT,
         ),
@@ -104,6 +104,7 @@ async def live_ws(websocket: WebSocket, preset: str = Query(default="podcast")):
                     properties={
                         "claim_text": types.Schema(type="STRING", description="The claim verbatim"),
                         "timestamp_seconds": types.Schema(type="INTEGER", description="Seconds since session start"),
+                        "context": types.Schema(type="STRING", description="1-2 surrounding sentences providing context for the claim (who is speaking, what they were discussing)"),
                     },
                     required=["claim_text", "timestamp_seconds"],
                 ),
@@ -168,6 +169,7 @@ async def check_fact(request: FactCheckRequest):
             claim_text=request.claim_text,
             preset=request.preset,
             speaker_info=request.speaker_info,
+            claim_context=request.claim_context,
         )
         result.timestamp_seconds = request.timestamp_seconds
 

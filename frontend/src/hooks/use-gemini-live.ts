@@ -142,7 +142,7 @@ export function useGeminiLive({
     try {
       if (!mediaStreamRef.current) {
         mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
-          audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+          audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
         });
         console.log("[Live] Mic acquired");
       }
@@ -198,6 +198,7 @@ export function useGeminiLive({
                 id: claimId,
                 claim_text: claimText,
                 timestamp_seconds: (call.args.timestamp_seconds as number) || 0,
+                context: (call.args.context as string) || undefined,
               });
               ws.send(JSON.stringify({
                 type: "tool_response",
@@ -249,7 +250,7 @@ export function useGeminiLive({
     if (!isPaused) return;
     try {
       mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true },
+        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       });
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         await startAudio(wsRef.current);

@@ -17,7 +17,7 @@ export function VerdictFeed({ claims, verdicts, checkingIds }: VerdictFeedProps)
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1.2 }}
-        className="flex flex-col items-start justify-center h-full gap-5 select-none"
+        className="flex flex-col items-start justify-center gap-5 select-none py-12"
       >
         <div className="w-full h-[1px]" style={{ background: 'linear-gradient(to right, var(--border-active), transparent)' }} />
         <p
@@ -34,7 +34,7 @@ export function VerdictFeed({ claims, verdicts, checkingIds }: VerdictFeedProps)
   const reversed = [...claims].reverse();
 
   return (
-    <div className="flex flex-col space-y-8 overflow-y-auto h-full pr-1">
+    <div className="flex flex-col space-y-8">
       <AnimatePresence mode="popLayout">
         {reversed.map((claim) => {
           const result = verdicts.find((v) => v.claim_text === claim.claim_text);

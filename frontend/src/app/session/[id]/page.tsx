@@ -6,7 +6,6 @@ import { useGeminiLive } from "@/hooks/use-gemini-live";
 import { useFactCheck } from "@/hooks/use-fact-check";
 import { VerdictFeed } from "@/components/verdict-feed";
 import { TopBar } from "@/components/top-bar";
-import { ListeningIndicator } from "@/components/listening-indicator";
 import type { ContextPreset, DetectedClaim, Verdict } from "@/types";
 
 const BACKEND_URL =
@@ -71,22 +70,20 @@ export default function SessionPage() {
   for (const v of verdicts) verdictCounts[v.verdict]++;
 
   return (
-    <div
-      className="flex flex-col"
-      style={{ height: "100dvh", backgroundColor: "var(--bg-primary)" }}
-    >
-      <TopBar
-        isConnected={isConnected}
-        isPaused={isPaused}
-        verdictCounts={verdictCounts}
-        totalClaims={claims.length}
-        onPause={pause}
-        onResume={resume}
-        onStop={handleStop}
-      />
-      <div className="w-full mx-auto flex flex-col flex-1 min-h-0 px-6 md:px-12 py-8 max-w-[900px]">
-        <ListeningIndicator isConnected={isConnected} isPaused={isPaused} />
-        <div className="flex-1 min-h-0 mt-6">
+    <div className="min-h-dvh" style={{ backgroundColor: "var(--bg-primary)" }}>
+      <div className="sticky top-0 z-10">
+        <TopBar
+          isConnected={isConnected}
+          isPaused={isPaused}
+          verdictCounts={verdictCounts}
+          totalClaims={claims.length}
+          onPause={pause}
+          onResume={resume}
+          onStop={handleStop}
+        />
+      </div>
+      <div className="w-full mx-auto px-6 md:px-12 py-8 max-w-[900px]">
+        <div>
           <VerdictFeed
             claims={claims}
             verdicts={verdicts}

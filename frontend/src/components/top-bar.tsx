@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, AlertTriangle, HelpCircle, Square, Play, Pause, Radio } from 'lucide-react';
 import type { Verdict } from '@/types';
+import { ListeningIndicator } from '@/components/listening-indicator';
 
 interface TopBarProps {
   isConnected: boolean;
@@ -52,7 +53,7 @@ export function TopBar({
   const hasVerdicts = Object.values(verdictCounts).some(count => count > 0);
 
   return (
-    <header className='sticky top-0 z-50 w-full bg-[var(--bg-card)] border-t-[6px] border-b-2 border-[var(--border-active)]' style={{ borderRadius: 0 }}>
+    <header className='sticky top-0 z-50 w-full bg-[var(--bg-card)] border-t-[6px] border-[var(--border-active)]' style={{ borderRadius: 0 }}>
       <div className='flex items-center justify-between px-4 py-3 md:px-6'>
         <div className='flex items-baseline overflow-hidden'>
           <h1
@@ -78,7 +79,7 @@ export function TopBar({
                   <div className='flex items-center gap-1.5'>
                     <motion.div
                       animate={isPaused ? { opacity: 1 } : { opacity: [1, 0.4, 1] }}
-                      transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+                      transition={isPaused ? { duration: 0 } : { repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
                       className='flex items-center justify-center'
                     >
                       <Radio
@@ -109,19 +110,19 @@ export function TopBar({
 
           <div className='flex items-center gap-1 border-l border-[var(--border-active)] pl-4'>
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.98 }}
               onClick={isPaused ? onResume : onPause}
               disabled={!isConnected}
-              className='p-2 text-[var(--text-secondary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-card)] transition-colors border border-[var(--border-active)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer'
+              className='h-8 w-8 flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--text-primary)] hover:text-[var(--bg-card)] transition-colors border border-[var(--border-active)] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer'
               aria-label={isPaused ? 'Resume' : 'Pause'}
               style={{ borderRadius: 0 }}
             >
               {isPaused ? <Play size={16} strokeWidth={2} /> : <Pause size={16} strokeWidth={2} />}
             </motion.button>
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.98 }}
               onClick={onStop}
-              className='flex items-center gap-1.5 px-3 py-2 font-[family:var(--font-mono)] text-xs tracking-widest uppercase text-white cursor-pointer'
+              className='h-8 flex items-center gap-1.5 px-3 font-[family:var(--font-mono)] text-xs tracking-widest uppercase text-white cursor-pointer hover:opacity-80 transition-opacity'
               aria-label='End Session'
               style={{ borderRadius: 0, backgroundColor: '#B91C1C' }}
             >
@@ -190,6 +191,7 @@ export function TopBar({
           </motion.div>
         )}
       </AnimatePresence>
+      <ListeningIndicator isConnected={isConnected} isPaused={isPaused} />
     </header>
   );
 }

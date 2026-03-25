@@ -215,15 +215,15 @@ export default function SummaryPage() {
                                 href={claim.source_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.15em] border-b border-transparent hover:border-current transition-colors font-[family:var(--font-mono)] text-[var(--accent-blue)]"
+                                className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.15em] hover:underline underline-offset-2 transition-colors font-[family:var(--font-mono)] text-[var(--accent-blue)]"
                               >
                                 <ExternalLink size={14} strokeWidth={2} />
                                 {claim.source_name || "Source"}
                               </a>
                             ) : <span />}
                             <div
-                              className={`px-3 py-1.5 text-[0.8rem] font-bold tracking-widest uppercase inline-flex items-center font-[family:var(--font-mono)] ${config.className}`}
-                              style={{ borderRadius: 0 }}
+                              className={`px-3 py-1.5 font-bold uppercase inline-flex items-center font-[family:var(--font-mono)] ${config.className}`}
+                              style={{ borderRadius: 0, fontSize: '0.8rem', letterSpacing: '0.15em' }}
                             >
                               {config.label}
                             </div>
@@ -253,10 +253,10 @@ export default function SummaryPage() {
             onClick={() => router.push("/")}
             whileHover={{ x: 6 }}
             whileTap={{ scale: 0.98 }}
-            className="h-14 bg-[var(--accent-red)] text-white uppercase tracking-[0.2em] text-sm font-bold font-[family:var(--font-display)] cursor-pointer"
+            className="h-14 bg-[var(--accent-red)] text-white uppercase tracking-widest text-xs font-[family:var(--font-mono)] cursor-pointer"
             style={{ borderRadius: 0 }}
           >
-            New Session
+            NEW SESSION
           </motion.button>
         </footer>
       </div>

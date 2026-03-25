@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { motion, type Variants } from 'framer-motion';
-import { Mic, Search, ShieldCheck, ArrowRight } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { motion, type Variants, AnimatePresence } from 'framer-motion';
+import { Mic, Search, ShieldCheck, ArrowRight, CheckCircle, XCircle, AlertTriangle, HelpCircle, Quote } from 'lucide-react';
 
 interface SplashHeroProps {
   onBeginClick: () => void;
@@ -35,19 +35,54 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
     },
   };
 
-  const lineVariants = (index: number): Variants => ({
-    hidden: { opacity: 0, scaleX: 0 },
-    visible: {
-      opacity: [0.3, 0.8, 0.3],
-      scaleX: 1,
-      transition: {
-        repeat: Infinity,
-        duration: 2 + index * 0.5,
-        ease: 'easeInOut' as const,
-        delay: 0.8 + index * 0.2,
-      },
-    },
-  });
+  const VERDICTS = [
+    { color: '#B91C1C',             icon: <XCircle size={20} strokeWidth={2} />,      label: 'FALSE'      },
+    { color: 'var(--accent-green)', icon: <CheckCircle size={20} strokeWidth={2} />,  label: 'TRUE'       },
+    { color: 'var(--accent-amber)', icon: <AlertTriangle size={20} strokeWidth={2} />, label: 'MISLEADING' },
+    { color: 'var(--accent-zinc)',  icon: <HelpCircle size={20} strokeWidth={2} />,   label: 'UNVERIFIED' },
+  ];
+
+  type CardPhase = 'verifying' | 'resolved';
+  type Card = { verdictIdx: number; phase: CardPhase; key: number };
+
+  const cardKeyRef = React.useRef(0);
+  const newCard = (verdictIdx: number): Card => ({ verdictIdx, phase: 'verifying', key: ++cardKeyRef.current });
+
+  const [cards, setCards] = useState<Card[]>([
+    newCard(0), newCard(1), newCard(2), newCard(3),
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    const shuffled = () => [0,1,2,3].sort(() => Math.random() - 0.5);
+
+    const run = () => {
+      if (cancelled) return;
+      const verdicts = shuffled();
+
+      // Replace each card one by one with a fresh key (triggers exit/enter animation), staggered
+      verdicts.forEach((v, i) => {
+        timeouts.push(setTimeout(() => {
+          if (cancelled) return;
+          const card = newCard(v);
+          setCards(prev => prev.map((c, idx) => idx === i ? card : c));
+
+          // Resolve this card after verifying delay
+          timeouts.push(setTimeout(() => {
+            if (cancelled) return;
+            setCards(prev => prev.map((c) => c.key === card.key ? { ...c, phase: 'resolved' } : c));
+          }, 1800));
+        }, i * 800));
+      });
+
+      // After last card resolved + hold, restart
+      timeouts.push(setTimeout(run, 3 * 800 + 1800 + 2000));
+    };
+
+    timeouts.push(setTimeout(run, 400));
+    return () => { cancelled = true; timeouts.forEach(clearTimeout); };
+  }, []);
 
   const steps = [
     {
@@ -104,18 +139,88 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
           Real-time AI fact-checking for live audio
         </motion.p>
 
-        {/* Abstract Visualization */}
-        <div className="w-full space-y-4 py-8">
-          {[0.85, 0.4, 0.9, 0.55, 0.3, 0.75, 0.45].map((width, i) => (
-            <motion.div
-              key={i}
-              custom={i}
-              variants={lineVariants(i)}
-              className="h-[1px] bg-[var(--text-muted)] origin-left"
-              style={{ width: `${width * 100}%` }}
-            />
-          ))}
-        </div>
+        {/* Live Demo — 2×2 fixed grid */}
+        <motion.div variants={fadeUpVariants} className="w-full"
+          style={{ border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card)', borderRadius: 0, padding: '12px' }}
+        >
+          <div className="grid grid-cols-2 gap-3">
+            {cards.map((card, i) => (
+              <div key={i} style={{ height: '110px', position: 'relative', overflow: 'hidden' }}>
+              <AnimatePresence mode="wait">
+              <motion.div
+                key={card.key}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute inset-0 flex flex-col justify-between overflow-hidden"
+                style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', borderRadius: 0, padding: '14px 14px 14px 22px' }}
+              >
+                {/* left accent bar */}
+                <motion.div
+                  animate={{ backgroundColor: card.phase === 'resolved' ? VERDICTS[card.verdictIdx].color : 'var(--border-active)' }}
+                  transition={{ duration: 0.6 }}
+                  style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px' }}
+                />
+
+                {/* skeleton lines */}
+                <div className="flex flex-col gap-2">
+                  {[90, 68, 45].map((w, j) => (
+                    <motion.div
+                      key={j}
+                      animate={card.phase === 'verifying' ? { opacity: [0.12, 0.36, 0.12] } : { opacity: 0.14 }}
+                      transition={card.phase === 'verifying'
+                        ? { repeat: Infinity, duration: 1.8, delay: j * 0.2, ease: 'easeInOut' }
+                        : { duration: 0.5 }}
+                      style={{ height: j === 0 ? '6px' : '4px', width: `${w}%`, backgroundColor: 'var(--text-muted)', borderRadius: 0 }}
+                    />
+                  ))}
+                </div>
+
+                {/* bottom: verifying label or verdict */}
+                <div className="flex items-center justify-between">
+                  <AnimatePresence mode="wait">
+                    {card.phase === 'verifying' ? (
+                      <motion.div key="v" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="flex items-center gap-1.5">
+                        <motion.span
+                          animate={{ opacity: [0.4, 1, 0.4] }}
+                          transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                          style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: 'var(--accent-red)', display: 'inline-block', flexShrink: 0 }}
+                        />
+                        <motion.span
+                          className="font-[family:var(--font-mono)] uppercase tracking-widest"
+                          animate={{ backgroundPosition: ['200% center', '-200% center'] }}
+                          transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
+                          style={{ fontSize: '0.55rem', background: 'linear-gradient(90deg, var(--text-muted) 20%, var(--accent-gold) 50%, var(--text-muted) 80%)', backgroundSize: '200% auto', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+                        >
+                          Verifying…
+                        </motion.span>
+                      </motion.div>
+                    ) : <span />}
+                  </AnimatePresence>
+                  <AnimatePresence mode="wait">
+                    {card.phase === 'resolved' && (
+                      <motion.div
+                        key={`r-${card.verdictIdx}`}
+                        initial={{ opacity: 0, scale: 0.6 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 350, damping: 24 }}
+                        className="flex items-center gap-1.5 font-[family:var(--font-mono)] font-bold uppercase"
+                        style={{ color: VERDICTS[card.verdictIdx].color, fontSize: '0.6rem', letterSpacing: '0.12em' }}
+                      >
+                        {VERDICTS[card.verdictIdx].icon}
+                        <span>{VERDICTS[card.verdictIdx].label}</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+              </AnimatePresence>
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
         {/* Editorial Divider */}
         <motion.div

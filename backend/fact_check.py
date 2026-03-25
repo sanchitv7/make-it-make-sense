@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+from datetime import date
 
 from google import genai
 from google.genai import types
@@ -34,10 +35,11 @@ async def fact_check_claim(
     claim_text: str,
     preset: str,
     speaker_info: str | None = None,
+    claim_context: str | None = None,
 ) -> FactCheckResponse:
     client = await _client_pool.get()
     try:
-        return await _do_fact_check(client, claim_text, preset, speaker_info)
+        return await _do_fact_check(client, claim_text, preset, speaker_info, claim_context)
     finally:
         await _client_pool.put(client)
 
@@ -47,15 +49,20 @@ async def _do_fact_check(
     claim_text: str,
     preset: str,
     speaker_info: str | None = None,
+    claim_context: str | None = None,
 ) -> FactCheckResponse:
 
     speaker_context = f"Speaker/Context: {speaker_info}" if speaker_info else ""
+    surrounding_context = f"Surrounding context: {claim_context}" if claim_context else ""
+    today = date.today().strftime("%B %d, %Y")
 
     # Use replace instead of .format() to avoid KeyError when claim_text contains braces
     prompt = (
         FACT_CHECK_PROMPT
+        .replace("{today_date}", today)
         .replace("{claim_text}", claim_text)
         .replace("{speaker_context}", speaker_context)
+        .replace("{surrounding_context}", surrounding_context)
     )
 
     try:

@@ -13,6 +13,7 @@ export interface DetectedClaim {
   id: string;
   claim_text: string;
   timestamp_seconds: number;
+  context?: string;
 }
 
 export interface FactCheckResult {

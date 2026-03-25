@@ -44,6 +44,7 @@ export function useFactCheck({
           session_id: sessionId,
           preset: preset,
           speaker_info: speakerInfo ?? null,
+          claim_context: claim.context ?? null,
         }),
       })
         .then((res) => {

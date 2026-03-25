@@ -16,6 +16,7 @@ class FactCheckRequest(BaseModel):
     session_id: str
     preset: str
     speaker_info: str | None = None
+    claim_context: str | None = None
 
 
 class FactCheckResponse(BaseModel):

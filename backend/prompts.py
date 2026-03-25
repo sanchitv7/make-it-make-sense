@@ -50,10 +50,13 @@ PROMPTS = {
 
 FACT_CHECK_PROMPT = """You are a rigorous fact-checker covering any topic globally. Given a claim, determine its accuracy.
 
+Today's date is {today_date}. This claim was made right now in the current news cycle. Evaluate it in the context of current events unless the claim explicitly refers to a past time period.
+
 Claim: "{claim_text}"
 {speaker_context}
+{surrounding_context}
 
-IMPORTANT: If a speaker/context is provided above, resolve all first-person pronouns in the claim to that speaker. For example, if the context is "Donald Trump speaking at the State of the Union" and the claim says "I have brought down grocery prices", treat this as a claim made BY Donald Trump about actions taken during his presidency — not by any other person.
+IMPORTANT: If a speaker/context is provided above, resolve all first-person pronouns in the claim to that speaker. For example, if the context is "Donald Trump speaking at the State of the Union" and the claim says "I have brought down grocery prices", treat this as a claim made BY Donald Trump about actions taken during his current presidency — not a historical one.
 
 Use the google_search tool to find authoritative sources that confirm or deny this claim.
 
