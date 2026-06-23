@@ -21,6 +21,7 @@ from models import (
 )
 from prompts import PROMPTS
 import supabase_client
+from supabase_client import session_exists
 
 load_dotenv()
 
@@ -35,6 +36,9 @@ if _extra := os.environ.get("ALLOWED_ORIGINS"):
 
 @app.on_event("startup")
 async def startup():
+    for key in ("GEMINI_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"):
+        if not os.environ.get(key):
+            raise RuntimeError(f"Missing required env var: {key}")
     await init_pool()
 
 
@@ -55,6 +59,59 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/api/token")
+async def get_ephemeral_token(preset: str = Query(default="podcast"), session_id: str = Query(...)):
+    if not await asyncio.to_thread(session_exists, session_id):
+        raise HTTPException(status_code=403, detail="Invalid session")
+
+    system_instruction = PROMPTS.get(preset, PROMPTS["podcast"])
+    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+    config = types.CreateAuthTokenConfig(
+        uses=1,
+        live_connect_constraints=types.LiveConnectConstraints(
+            model=GEMINI_MODEL,
+            config=types.LiveConnectConfig(
+                response_modalities=["AUDIO"],
+                system_instruction=system_instruction,
+                input_audio_transcription=types.AudioTranscriptionConfig(),
+                realtime_input_config=types.RealtimeInputConfig(
+                    automatic_activity_detection=types.AutomaticActivityDetection(
+                        end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
+                        silence_duration_ms=200,
+                    ),
+                    turn_coverage=types.TurnCoverage.TURN_INCLUDES_ALL_INPUT,
+                ),
+                context_window_compression=types.ContextWindowCompressionConfig(
+                    sliding_window=types.SlidingWindow(),
+                ),
+                tools=[types.Tool(function_declarations=[
+                    types.FunctionDeclaration(
+                        name="report_claim",
+                        description="Report a verifiable factual claim heard in the audio",
+                        parameters=types.Schema(
+                            type="OBJECT",
+                            properties={
+                                "claim_text": types.Schema(type="STRING", description="The claim verbatim"),
+                                "timestamp_seconds": types.Schema(type="INTEGER", description="Seconds since session start"),
+                                "context": types.Schema(type="STRING", description="1-2 surrounding sentences providing context for the claim (who is speaking, what they were discussing)"),
+                            },
+                            required=["claim_text", "timestamp_seconds"],
+                        ),
+                    )
+                ])],
+            ),
+        ),
+    )
+
+    try:
+        token = await asyncio.to_thread(client.auth_tokens.create, config=config)
+        return {"token": token.name}
+    except Exception as e:
+        logger.error("Token creation failed: %s", e)
+        raise HTTPException(status_code=503, detail="Token service unavailable")
 
 
 def _to_browser_msg(response) -> dict | None:

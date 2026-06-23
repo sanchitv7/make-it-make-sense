@@ -9,6 +9,7 @@ import { ListeningIndicator } from '@/components/listening-indicator';
 interface TopBarProps {
   isConnected: boolean;
   isPaused: boolean;
+  isReconnecting: boolean;
   verdictCounts: Record<Verdict, number>;
   totalClaims: number;
   onPause: () => void;
@@ -19,6 +20,7 @@ interface TopBarProps {
 export function TopBar({
   isConnected,
   isPaused,
+  isReconnecting,
   verdictCounts,
   totalClaims,
   onPause,
@@ -94,6 +96,23 @@ export function TopBar({
                   <span className='text-[var(--text-primary)] border-l border-[var(--border-subtle)] pl-3 inline-block w-[5.5ch]'>
                     {formatTime(elapsed)}
                   </span>
+                </motion.div>
+              ) : isReconnecting ? (
+                <motion.div
+                  key="reconnecting"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className='flex items-center gap-1.5 text-xs md:text-sm font-bold'
+                >
+                  <motion.div
+                    animate={{ opacity: [1, 0.3, 1] }}
+                    transition={{ repeat: Infinity, duration: 1, ease: 'easeInOut' }}
+                    className='flex items-center justify-center'
+                  >
+                    <Radio size={12} className='text-[var(--accent-amber)]' />
+                  </motion.div>
+                  <span className='text-[var(--accent-amber)]'>RECONNECTING…</span>
                 </motion.div>
               ) : (
                 <motion.span

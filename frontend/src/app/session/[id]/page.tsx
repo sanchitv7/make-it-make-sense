@@ -22,7 +22,7 @@ export default function SessionPage() {
   const [claims, setClaims] = useState<DetectedClaim[]>([]);
   const startedRef = useRef(false);
 
-  const { verdicts, checkingIds, checkClaim } = useFactCheck({ sessionId, preset, speakerInfo: contextDetail });
+  const { verdicts, checkingIds, hasRateLimit, checkClaim } = useFactCheck({ sessionId, preset, speakerInfo: contextDetail });
 
   const onClaim = useCallback(
     (claim: DetectedClaim) => {
@@ -32,10 +32,14 @@ export default function SessionPage() {
     [checkClaim]
   );
 
-  const { isConnected, isPaused, start, stop, pause, resume } = useGeminiLive({
+  const { isConnected, isPaused, isReconnecting, connectionError, start, stop, pause, resume } = useGeminiLive({
     preset,
+    sessionId,
     onClaim,
   });
+
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  useEffect(() => { if (!connectionError) setBannerDismissed(false); }, [connectionError]);
 
   useEffect(() => {
     if (!startedRef.current) {
@@ -71,10 +75,35 @@ export default function SessionPage() {
 
   return (
     <div className="min-h-dvh" style={{ backgroundColor: "var(--bg-primary)" }}>
+      {connectionError && !bannerDismissed && (
+        <div
+          className="flex items-center justify-between px-4 py-2 font-[family:var(--font-mono)] text-xs uppercase tracking-widest sticky top-0 z-20"
+          style={{ backgroundColor: 'rgba(251,191,36,0.15)', borderBottom: '1px solid rgba(251,191,36,0.4)', color: 'var(--accent-amber)' }}
+        >
+          <span>{connectionError}</span>
+          <button
+            onClick={() => setBannerDismissed(true)}
+            aria-label="Dismiss"
+            className="ml-4 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+            style={{ background: 'none', border: 'none', color: 'inherit' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {hasRateLimit && (
+        <div
+          className="flex items-center px-4 py-1.5 font-[family:var(--font-mono)] text-xs uppercase tracking-widest sticky z-20"
+          style={{ top: connectionError && !bannerDismissed ? '34px' : '0', backgroundColor: 'rgba(251,191,36,0.08)', borderBottom: '1px solid rgba(251,191,36,0.2)', color: 'var(--accent-amber)', opacity: 0.8 }}
+        >
+          Rate limit reached — some claims marked unverified without checking
+        </div>
+      )}
       <div className="sticky top-0 z-10">
         <TopBar
           isConnected={isConnected}
           isPaused={isPaused}
+          isReconnecting={isReconnecting}
           verdictCounts={verdictCounts}
           totalClaims={claims.length}
           onPause={pause}

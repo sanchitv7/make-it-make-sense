@@ -23,6 +23,7 @@ export interface FactCheckResult {
   verdict_summary: string;
   source_name: string | null;
   source_url: string | null;
+  error_code?: string | null;
 }
 
 export interface SessionRow {
