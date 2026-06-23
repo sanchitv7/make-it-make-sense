@@ -15,6 +15,7 @@ interface UseFactCheckOptions {
 interface UseFactCheckReturn {
   verdicts: FactCheckResult[];
   checkingIds: Set<string>;
+  hasRateLimit: boolean;
   checkClaim: (claim: DetectedClaim) => void;
 }
 
@@ -48,10 +49,25 @@ export function useFactCheck({
         }),
       })
         .then((res) => {
+          if (res.status === 429) {
+            const rateLimitedResult: FactCheckResult = {
+              claim_text: claim.claim_text,
+              timestamp_seconds: claim.timestamp_seconds,
+              verdict: "UNVERIFIED",
+              verdict_summary: "Fact-check quota exceeded — please try again later.",
+              source_name: null,
+              source_url: null,
+              error_code: "RATE_LIMITED",
+            };
+            setVerdicts((prev) => [...prev, rateLimitedResult]);
+            setCheckingIds((prev) => { const next = new Set(prev); next.delete(claim.id); return next; });
+            return null;
+          }
           if (!res.ok) throw new Error("Fact-check failed");
           return res.json();
         })
-        .then((result: FactCheckResult) => {
+        .then((result: FactCheckResult | null) => {
+          if (!result) return;
           setVerdicts((prev) => [...prev, result]);
           setCheckingIds((prev) => {
             const next = new Set(prev);
@@ -83,5 +99,7 @@ export function useFactCheck({
     [sessionId, preset, speakerInfo]
   );
 
-  return { verdicts, checkingIds, checkClaim };
+  const hasRateLimit = verdicts.some((v) => v.error_code === "RATE_LIMITED");
+
+  return { verdicts, checkingIds, hasRateLimit, checkClaim };
 }

@@ -80,28 +80,27 @@ async def _do_fact_check(
                 timestamp_seconds=0,
                 verdict=Verdict.UNVERIFIED,
                 verdict_summary="Fact-check quota exceeded — please try again later.",
+                error_code="RATE_LIMITED",
             )
         raise
 
-    # Collect text across all candidates/parts (model may stream multiple turns)
-    raw = ""
-    if response.text:
-        raw = response.text
-    elif response.candidates:
-        for candidate in response.candidates:
-            if candidate.content and candidate.content.parts:
-                for part in candidate.content.parts:
-                    if hasattr(part, "text") and part.text:
-                        raw += part.text
+    raw = response.text or ""
 
-    # Extract JSON object — use the last match to skip any preamble text
-    matches = list(re.finditer(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}", raw, re.DOTALL))
-    # Fall back to greedy match if structured match fails
-    if not matches:
-        matches = list(re.finditer(r"\{.*\}", raw, re.DOTALL))
+    # Strip markdown code fences the model sometimes wraps JSON in
+    if raw.strip().startswith("```"):
+        raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+
     try:
-        result = json.loads(matches[-1].group() if matches else raw)
-    except (json.JSONDecodeError, ValueError, IndexError):
+        result = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        # Fallback: grab any JSON object from the text
+        m = re.search(r"\{.*\}", raw, re.DOTALL)
+        try:
+            result = json.loads(m.group()) if m else {}
+        except (json.JSONDecodeError, ValueError):
+            result = {}
+
+    if not result:
         return FactCheckResponse(
             claim_text=claim_text,
             timestamp_seconds=0,

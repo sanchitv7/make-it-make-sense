@@ -26,6 +26,7 @@ class FactCheckResponse(BaseModel):
     verdict_summary: str
     source_name: str | None = None
     source_url: str | None = None
+    error_code: str | None = None
 
 
 class CreateSessionRequest(BaseModel):

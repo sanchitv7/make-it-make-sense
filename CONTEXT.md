@@ -5,7 +5,7 @@ Real-time AI fact-checking web app that listens to live audio, detects factual c
 ## Architecture
 
 ```
-Browser ──getUserMedia──→ Gemini Live API (direct WebSocket, ephemeral token)
+Browser ──getUserMedia──→ FastAPI /ws/live ──→ Gemini Live API (WebSocket proxy)
   │                              │
   │ ←── transcript deltas ───────┘
   │ ←── report_claim() function calls
@@ -24,7 +24,6 @@ Browser ──getUserMedia──→ Gemini Live API (direct WebSocket, ephemeral
 - `models.py` — Pydantic request/response models (FactCheckRequest, FactCheckResponse, etc.)
 - `prompts.py` — System prompts for 4 context presets + fact-check prompt template
 - `fact_check.py` — Fact-check pipeline: Gemini 2.5 Flash + Google Search + source filtering
-- `gemini_live.py` — Ephemeral token generation for client-side Live API access
 - `source_filter.py` — Trusted domain whitelist + URL filtering (reuters, bbc, gov, etc.)
 - `supabase_client.py` — Supabase client init + CRUD for sessions and claims
 - `requirements.txt` — Python dependencies
@@ -50,15 +49,14 @@ Browser ──getUserMedia──→ Gemini Live API (direct WebSocket, ephemeral
 ## Data Flow
 
 1. User selects a context preset → POST /api/session creates a Supabase session
-2. Session page opens → fetches ephemeral token from GET /api/token
-3. WebSocket connects to Gemini Live API with system instruction + report_claim tool
-4. Mic audio is captured at 16kHz PCM mono, streamed via WebSocket
-5. Gemini transcribes audio, detects claims, calls report_claim()
-6. Each detected claim → POST /api/fact-check → Gemini 2.5 Flash + Google Search
-7. Source URLs are filtered through trusted domain whitelist
-8. If no trusted source → verdict forced to UNVERIFIED
-9. Verdict card appears in feed, transcript highlights the claim
-10. On stop → PATCH /api/session/{id} → navigate to summary page
+2. Session page opens → WebSocket connects to backend /ws/live (proxied to Gemini Live)
+3. Mic audio is captured at 16kHz PCM mono via AudioWorklet, streamed to backend
+4. Backend proxies audio to Gemini Live; Gemini transcribes and calls report_claim()
+5. Each detected claim → POST /api/fact-check → Gemini 2.5 Flash + Google Search
+6. Source URLs are filtered through trusted domain whitelist
+7. If no trusted source → verdict forced to UNVERIFIED
+8. Verdict card appears in feed, transcript highlights the claim
+9. On stop → PATCH /api/session/{id} → navigate to summary page
 
 ## API Routes
 
@@ -82,6 +80,13 @@ Browser ──getUserMedia──→ Gemini Live API (direct WebSocket, ephemeral
 
 ## Running Locally
 
+**With Docker (recommended):**
+```bash
+cp backend/.env.example backend/.env  # fill in env vars
+make dev                               # starts both services
+```
+
+**Without Docker:**
 ```bash
 # Terminal 1 — Backend
 cd backend && source .venv/bin/activate && uvicorn main:app --reload
@@ -122,5 +127,6 @@ CREATE INDEX idx_claims_session ON claims(session_id);
 
 - [x] Backend: all routes implemented and importing cleanly
 - [x] Frontend: builds successfully, all pages and components in place
-- [ ] Supabase: schema needs to be applied (run SQL in Supabase dashboard)
+- [x] Docker: `make dev` starts both services (requires `backend/.env`)
+- [ ] Supabase: schema needs to be applied — see `supabase/migrations/001_init.sql`
 - [ ] End-to-end testing with live audio

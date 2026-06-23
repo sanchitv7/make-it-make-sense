@@ -24,7 +24,7 @@ Verdicts are forced to **UNVERIFIED** if no citation from a trusted domain (Reut
 ## Architecture
 
 ```
-Browser ──getUserMedia──→ Gemini Live API (ephemeral token, WebSocket)
+Browser ──getUserMedia──→ FastAPI /ws/live ──→ Gemini Live API (WebSocket proxy)
   │                              │
   │ ←── transcript deltas ───────┘
   │ ←── report_claim() function calls
@@ -36,10 +36,10 @@ Browser ──getUserMedia──→ Gemini Live API (ephemeral token, WebSocket)
   └──POST /api/session──────→ Supabase (sessions + claims)
 ```
 
-Two services, no shared code:
+Two paths, no shared code:
 
-- **WebSocket path**: browser mic → backend `/ws/live` → Gemini Live API (proxied)
-- **HTTP path**: detected claims → `POST /api/fact-check` → Gemini 2.5 Flash
+- **WebSocket path**: browser mic → backend `/ws/live` → Gemini Live API (proxied by FastAPI)
+- **HTTP path**: detected claims → `POST /api/fact-check` → Gemini 2.5 Flash + Google Search
 
 ## Running locally
 
@@ -133,7 +133,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `fact_check.py` | Fact-check pipeline: Gemini 2.5 Flash + Google Search + source filtering |
 | `source_filter.py` | Trusted domain whitelist (Reuters, BBC, AP, `.gov`, etc.) |
 | `prompts.py` | System instructions for each context preset |
-| `gemini_live.py` | Ephemeral token generation for client-side Live API |
+| `models.py` | Pydantic request/response models |
 | `supabase_client.py` | Supabase CRUD for sessions and claims |
 
 ### Frontend

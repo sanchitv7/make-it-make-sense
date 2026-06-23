@@ -107,16 +107,26 @@ export function ClaimCard({ claim, result, isChecking }: ClaimCardProps) {
                   ) : <span />}
 
                   {/* Verdict badge — prominent bottom-right */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 font-[family:var(--font-mono)] uppercase font-bold ${config!.className}`}
-                    style={{ borderRadius: 0, fontSize: '0.8rem', letterSpacing: '0.15em' }}
-                  >
-                    {config!.icon}
-                    {config!.label}
-                  </motion.div>
+                  <div className="flex items-center gap-2">
+                    {result.error_code === "RATE_LIMITED" && (
+                      <span
+                        className="font-[family:var(--font-mono)] uppercase px-1.5 py-0.5"
+                        style={{ fontSize: '0.6rem', letterSpacing: '0.1em', color: 'var(--accent-amber)', border: '1px solid var(--accent-amber)', borderRadius: 0, opacity: 0.7 }}
+                      >
+                        quota
+                      </span>
+                    )}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      className={`inline-flex items-center gap-2 px-3 py-1.5 font-[family:var(--font-mono)] uppercase font-bold ${config!.className}`}
+                      style={{ borderRadius: 0, fontSize: '0.8rem', letterSpacing: '0.15em' }}
+                    >
+                      {config!.icon}
+                      {config!.label}
+                    </motion.div>
+                  </div>
                 </div>
               </motion.div>
             ) : isChecking ? (

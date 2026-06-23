@@ -49,6 +49,18 @@ def end_session(session_id: str) -> None:
     ).eq("id", session_id).execute()
 
 
+def session_exists(session_id: str) -> bool:
+    result = (
+        get_client()
+        .table("sessions")
+        .select("id")
+        .eq("id", session_id)
+        .limit(1)
+        .execute()
+    )
+    return bool(result.data)
+
+
 def upsert_claim(claim_data: dict) -> dict:
     result = get_client().table("claims").insert(claim_data).execute()
     return result.data[0]

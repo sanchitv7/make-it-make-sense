@@ -14,14 +14,18 @@ export type TranscriptSegment =
 
 interface UseGeminiLiveOptions {
   preset: ContextPreset;
+  sessionId: string;
   onClaim: (claim: DetectedClaim) => void;
 }
 
 export function useGeminiLive({
   preset,
+  sessionId,
   onClaim,
 }: UseGeminiLiveOptions) {
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -31,11 +35,13 @@ export function useGeminiLive({
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stoppedRef = useRef(true);
   const presetRef = useRef(preset);
+  const sessionIdRef = useRef(sessionId);
   const onClaimRef = useRef(onClaim);
   // ID of the current "open" text segment being streamed into
   const currentTextSegIdRef = useRef<string | null>(null);
 
   useEffect(() => { presetRef.current = preset; }, [preset]);
+  useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
   useEffect(() => { onClaimRef.current = onClaim; }, [onClaim]);
 
   function teardownAudio() {
@@ -149,9 +155,19 @@ export function useGeminiLive({
 
       if (stoppedRef.current) return;
 
-      const wsBase = BACKEND_URL.replace(/^http/, "ws");
-      const wsUrl = `${wsBase}/ws/live?preset=${presetRef.current}`;
-      console.log("[Live] Connecting to proxy:", wsUrl);
+      let wsUrl: string;
+      try {
+        const tokenRes = await fetch(`${BACKEND_URL}/api/token?preset=${presetRef.current}&session_id=${encodeURIComponent(sessionIdRef.current)}`);
+        if (!tokenRes.ok) throw new Error(`Token fetch failed: ${tokenRes.status}`);
+        const { token } = await tokenRes.json() as { token: string };
+        wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${token}`;
+        console.log("[Live] Using direct Gemini connection via ephemeral token");
+      } catch (err) {
+        console.warn("[Live] Token fetch failed, falling back to proxy:", err);
+        const wsBase = BACKEND_URL.replace(/^http/, "ws");
+        wsUrl = `${wsBase}/ws/live?preset=${presetRef.current}`;
+      }
+      console.log("[Live] Connecting to:", wsUrl.slice(0, 80));
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -168,6 +184,8 @@ export function useGeminiLive({
         if ("setupComplete" in msg) {
           console.log("[Live] Setup complete — starting audio");
           setIsConnected(true);
+          setConnectionError(null);
+          setIsReconnecting(false);
           await startAudio(ws);
           return;
         }
@@ -209,15 +227,22 @@ export function useGeminiLive({
         }
       };
 
-      ws.onerror = (e) => console.error("[Live] WS error", e);
+      ws.onerror = (e) => {
+        console.error("[Live] WS error", e);
+        setConnectionError("Connection error — retrying…");
+      };
 
       ws.onclose = (e) => {
         console.log("[Live] WS closed", e.code, e.reason);
         teardownAudio();
         setIsConnected(false);
         if (!stoppedRef.current) {
+          setIsReconnecting(true);
+          setConnectionError(null);
           console.log("[Live] Reconnecting in 2s");
           setTimeout(doConnect, 2000);
+        } else {
+          setIsReconnecting(false);
         }
       };
 
@@ -232,7 +257,16 @@ export function useGeminiLive({
     } catch (err) {
       console.error("[Live] connect error:", err);
       setIsConnected(false);
-      if (!stoppedRef.current) setTimeout(doConnect, 3000);
+      if (!stoppedRef.current) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        setConnectionError(
+          msg.includes("Permission denied") || msg.includes("NotAllowedError")
+            ? "Microphone access denied — please allow mic access and refresh."
+            : `Connection failed: ${msg}. Retrying…`
+        );
+        setIsReconnecting(true);
+        setTimeout(doConnect, 3000);
+      }
     }
   }
 
@@ -272,6 +306,8 @@ export function useGeminiLive({
 
   const stop = useCallback(() => {
     setIsPaused(false);
+    setIsReconnecting(false);
+    setConnectionError(null);
     stoppedRef.current = true;
     if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -287,7 +323,7 @@ export function useGeminiLive({
 
   useEffect(() => () => { stoppedRef.current = true; stop(); }, [stop]);
 
-  return { isConnected, isPaused, segments, start, stop, pause, resume };
+  return { isConnected, isPaused, isReconnecting, connectionError, segments, start, stop, pause, resume };
 }
 
 function bufToBase64(buf: ArrayBuffer): string {
