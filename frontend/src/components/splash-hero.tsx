@@ -202,10 +202,10 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
                     {card.phase === 'resolved' && (
                       <motion.div
                         key={`r-${card.verdictIdx}`}
-                        initial={{ opacity: 0, scale: 0.6 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ type: 'spring', stiffness: 350, damping: 24 }}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.3, ease: 'easeOut' }}
                         className="flex items-center gap-1.5 font-[family:var(--font-mono)] font-bold uppercase"
                         style={{ color: VERDICTS[card.verdictIdx].color, fontSize: '0.6rem', letterSpacing: '0.12em' }}
                       >
