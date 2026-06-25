@@ -178,7 +178,7 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
                 </div>
 
                 {/* bottom: verifying label or verdict */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between" style={{ height: '20px' }}>
                   <AnimatePresence mode="wait">
                     {card.phase === 'verifying' ? (
                       <motion.div key="v" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="flex items-center gap-1.5">
