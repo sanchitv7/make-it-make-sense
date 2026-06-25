@@ -178,42 +178,46 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
                 </div>
 
                 {/* bottom: verifying label or verdict */}
-                <div className="flex items-center justify-between" style={{ height: '20px' }}>
-                  <AnimatePresence mode="wait">
-                    {card.phase === 'verifying' ? (
-                      <motion.div key="v" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="flex items-center gap-1.5">
-                        <motion.span
-                          animate={{ opacity: [0.4, 1, 0.4] }}
-                          transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
-                          style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: 'var(--accent-red)', display: 'inline-block', flexShrink: 0 }}
-                        />
-                        <motion.span
-                          className="font-[family:var(--font-mono)] uppercase tracking-widest"
-                          animate={{ backgroundPosition: ['200% center', '-200% center'] }}
-                          transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
-                          style={{ fontSize: '0.55rem', background: 'linear-gradient(90deg, var(--text-muted) 20%, var(--accent-gold) 50%, var(--text-muted) 80%)', backgroundSize: '200% auto', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+                <div className="flex items-center" style={{ height: '20px' }}>
+                  <div>
+                    <AnimatePresence mode="wait">
+                      {card.phase === 'verifying' && (
+                        <motion.div key="v" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="flex items-center gap-1.5">
+                          <motion.span
+                            animate={{ opacity: [0.4, 1, 0.4] }}
+                            transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                            style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: 'var(--accent-red)', display: 'inline-block', flexShrink: 0 }}
+                          />
+                          <motion.span
+                            className="font-[family:var(--font-mono)] uppercase tracking-widest"
+                            animate={{ backgroundPosition: ['200% center', '-200% center'] }}
+                            transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
+                            style={{ fontSize: '0.55rem', background: 'linear-gradient(90deg, var(--text-muted) 20%, var(--accent-gold) 50%, var(--text-muted) 80%)', backgroundSize: '200% auto', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+                          >
+                            Verifying…
+                          </motion.span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  <div className="ml-auto">
+                    <AnimatePresence mode="wait">
+                      {card.phase === 'resolved' && (
+                        <motion.div
+                          key={`r-${card.verdictIdx}`}
+                          initial={{ opacity: 0, scale: 0.6 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ type: 'spring', stiffness: 350, damping: 24 }}
+                          className="flex items-center gap-1.5 font-[family:var(--font-mono)] font-bold uppercase"
+                          style={{ color: VERDICTS[card.verdictIdx].color, fontSize: '0.6rem', letterSpacing: '0.12em' }}
                         >
-                          Verifying…
-                        </motion.span>
-                      </motion.div>
-                    ) : <span />}
-                  </AnimatePresence>
-                  <AnimatePresence mode="wait">
-                    {card.phase === 'resolved' && (
-                      <motion.div
-                        key={`r-${card.verdictIdx}`}
-                        initial={{ opacity: 0, scale: 0.6 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ type: 'spring', stiffness: 350, damping: 24 }}
-                        className="flex items-center gap-1.5 font-[family:var(--font-mono)] font-bold uppercase"
-                        style={{ color: VERDICTS[card.verdictIdx].color, fontSize: '0.6rem', letterSpacing: '0.12em' }}
-                      >
-                        {VERDICTS[card.verdictIdx].icon}
-                        <span>{VERDICTS[card.verdictIdx].label}</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                          {VERDICTS[card.verdictIdx].icon}
+                          <span>{VERDICTS[card.verdictIdx].label}</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </motion.div>
               </AnimatePresence>
