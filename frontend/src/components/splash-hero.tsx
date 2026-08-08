@@ -136,7 +136,7 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
           variants={fadeUpVariants}
           className="text-[var(--text-secondary)] font-[family:var(--font-body)] text-xl md:text-2xl max-w-2xl leading-relaxed"
         >
-          Real-time AI fact-checking for live audio
+          Hear a claim. Know if it holds up.
         </motion.p>
 
         {/* Live Demo — 2×2 fixed grid */}

@@ -24,7 +24,7 @@ const jetBrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "Make It Make Sense",
-  description: "Live AI fact-checking as you listen",
+  description: "Hear a claim. Know if it holds up.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

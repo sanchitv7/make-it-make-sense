@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Make It Make Sense",
     short_name: "MIMS",
-    description: "Real-time AI fact-checking for live audio",
+    description: "Hear a claim. Know if it holds up.",
     start_url: "/",
     display: "standalone",
     orientation: "any",
