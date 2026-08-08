@@ -98,10 +98,10 @@ export function ContextSetup() {
       >
         <motion.header variants={itemVariants}>
           <h1 className="font-[family:var(--font-display)] font-bold text-[var(--text-primary)] text-[2rem] md:text-[2.5rem] leading-tight">
-            Choose Your Context
+            What are you listening to?
           </h1>
           <p className="font-[family:var(--font-body)] text-[var(--text-secondary)] text-base mt-2">
-            Select the type of audio you want to fact-check.
+            Pick a setting so we know which claims matter most.
           </p>
         </motion.header>
 
