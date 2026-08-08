@@ -88,19 +88,19 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
     {
       num: '01',
       title: 'LISTEN',
-      desc: 'Capture live audio from any source',
+      desc: 'Point your mic at the speech, debate, or show',
       icon: <Mic size={22} strokeWidth={2} />,
     },
     {
       num: '02',
       title: 'DETECT',
-      desc: 'AI identifies factual claims in real time',
+      desc: 'Spots factual claims as they\'re spoken',
       icon: <Search size={22} strokeWidth={2} />,
     },
     {
       num: '03',
       title: 'VERIFY',
-      desc: 'Each claim cross-referenced with live sources',
+      desc: 'Checks each one against trusted sources',
       icon: <ShieldCheck size={22} strokeWidth={2} />,
     },
   ];
