@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useId, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { Eye, EyeOff, X } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 
 type AuthMode = "signin" | "signup" | "forgot";
@@ -43,12 +43,29 @@ function submitLabel(mode: AuthMode): string {
   }
 }
 
+function modeSubtitle(mode: AuthMode): string {
+  switch (mode) {
+    case "forgot":
+      return "We’ll email you a link to set a new password.";
+    case "signup":
+      return "Name, email, and password to start listening.";
+    case "signin":
+      return "Email and password to start listening.";
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
+}
+
 export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
   const { signIn, signUp, resetPassword } = useAuth();
   const titleId = useId();
   const [mode, setMode] = useState<AuthMode>("signin");
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -56,8 +73,10 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
   useEffect(() => {
     if (!open) return;
     setMode("signin");
+    setFullName("");
     setEmail("");
     setPassword("");
+    setShowPassword(false);
     setError(null);
     setInfo(null);
     setSubmitting(false);
@@ -76,6 +95,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
     setMode(next);
     setError(null);
     setInfo(null);
+    setShowPassword(false);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -94,8 +114,23 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
         return;
       }
 
-      const action = mode === "signup" ? signUp : signIn;
-      const { error: err } = await action(email.trim(), password);
+      if (mode === "signup") {
+        const name = fullName.trim();
+        if (!name) {
+          setError("Name is required.");
+          return;
+        }
+        const { error: err } = await signUp(email.trim(), password, name);
+        if (err) {
+          setError(err);
+          return;
+        }
+        onClose();
+        onSuccess?.();
+        return;
+      }
+
+      const { error: err } = await signIn(email.trim(), password);
       if (err) {
         setError(err);
         return;
@@ -153,12 +188,27 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
               {modeTitle(mode)}
             </h2>
             <p className="mb-6 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
-              {mode === "forgot"
-                ? "We’ll email you a link to set a new password."
-                : "Email and password to start listening."}
+              {modeSubtitle(mode)}
             </p>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {mode === "signup" && (
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[10px] font-[family:var(--font-mono)] tracking-widest text-[var(--text-muted)] uppercase">
+                    Name
+                  </span>
+                  <input
+                    type="text"
+                    autoComplete="name"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="h-11 bg-[var(--bg-primary)] px-3 font-[family:var(--font-body)] text-[var(--text-primary)] outline-none"
+                    style={{ border: "1px solid var(--border-subtle)" }}
+                  />
+                </label>
+              )}
+
               <label className="flex flex-col gap-1.5">
                 <span className="text-[10px] font-[family:var(--font-mono)] tracking-widest text-[var(--text-muted)] uppercase">
                   Email
@@ -179,16 +229,30 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
                   <span className="text-[10px] font-[family:var(--font-mono)] tracking-widest text-[var(--text-muted)] uppercase">
                     Password
                   </span>
-                  <input
-                    type="password"
-                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                    required
-                    minLength={6}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 bg-[var(--bg-primary)] px-3 font-[family:var(--font-body)] text-[var(--text-primary)] outline-none"
-                    style={{ border: "1px solid var(--border-subtle)" }}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                      required
+                      minLength={6}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-11 w-full bg-[var(--bg-primary)] px-3 pr-11 font-[family:var(--font-body)] text-[var(--text-primary)] outline-none"
+                      style={{ border: "1px solid var(--border-subtle)" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff size={18} strokeWidth={2} />
+                      ) : (
+                        <Eye size={18} strokeWidth={2} />
+                      )}
+                    </button>
+                  </div>
                 </label>
               )}
 
