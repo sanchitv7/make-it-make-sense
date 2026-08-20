@@ -51,15 +51,13 @@ async def _do_fact_check(
     speaker_info: str | None = None,
     claim_context: str | None = None,
 ) -> FactCheckResponse:
-
     speaker_context = f"Speaker/Context: {speaker_info}" if speaker_info else ""
     surrounding_context = f"Surrounding context: {claim_context}" if claim_context else ""
     today = date.today().strftime("%B %d, %Y")
 
     # Use replace instead of .format() to avoid KeyError when claim_text contains braces
     prompt = (
-        FACT_CHECK_PROMPT
-        .replace("{today_date}", today)
+        FACT_CHECK_PROMPT.replace("{today_date}", today)
         .replace("{claim_text}", claim_text)
         .replace("{speaker_context}", speaker_context)
         .replace("{surrounding_context}", surrounding_context)
@@ -127,7 +125,9 @@ async def _do_fact_check(
             claim_text=claim_text,
             timestamp_seconds=0,
             verdict=Verdict.UNVERIFIED,
-            verdict_summary=result.get("verdict_summary", "Could not verify with a credible source"),
+            verdict_summary=result.get(
+                "verdict_summary", "Could not verify with a credible source"
+            ),
         )
 
     verdict_str = result.get("verdict", "UNVERIFIED").upper()

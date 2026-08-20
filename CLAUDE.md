@@ -4,20 +4,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+### Quality gates (preferred)
+
+```bash
+make install          # backend+frontend deps + git hooks (pre-commit, pre-push)
+make hooks            # install/reinstall git hooks only
+make fmt              # ruff + prettier
+make check            # Maximal suite (same as pre-push) — sectioned fail-fast
+make lint typecheck test build smoke-backend   # individual targets
+```
+
+Never use `git commit --no-verify` or `git push --no-verify`. Ship via normal `git push` (runs `make check` once).
+
 ### Backend
 ```bash
 cd backend && source .venv/bin/activate && uvicorn main:app --reload
 ```
-Dependencies: `cd backend && uv pip install -r requirements.txt`
+Dependencies: `make install` or `cd backend && uv pip install -r requirements.txt -r requirements-dev.txt`
 
 Environment: copy `backend/.env.example` → `backend/.env` and fill in:
 - `GEMINI_API_KEY` — Gemini API key
 - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` — from Supabase dashboard
 - `ALLOWED_ORIGINS` — set to `http://localhost:3000` for local dev
 
-Tests:
+Unit tests (in `make check`):
 ```bash
-cd backend && source .venv/bin/activate && python test_claims.py
+cd backend && .venv/bin/python -m pytest tests -q
+```
+
+Manual Live/Gemini flow tests (API keys / mic required — **not** in `make check`):
+```bash
+cd backend && .venv/bin/python scripts/test_claims.py
+cd backend && .venv/bin/python scripts/test_live.py
+cd backend && .venv/bin/python scripts/test_tool_cycle.py
 ```
 
 ### Frontend
@@ -25,6 +44,9 @@ cd backend && source .venv/bin/activate && python test_claims.py
 cd frontend && npm run dev      # dev server
 cd frontend && npm run build    # production build
 cd frontend && npm run lint     # eslint
+cd frontend && npm run typecheck
+cd frontend && npm run test     # vitest
+cd frontend && npm run format   # prettier
 ```
 
 ## Architecture
@@ -54,7 +76,7 @@ Two separate services that never share code:
 
 ### Frontend hooks
 - `use-gemini-live.ts` — owns the WebSocket lifecycle, mic capture, AudioWorklet, auto-reconnect, and emits `DetectedClaim` events
-- `use-fact-check.ts` — fires parallel `POST /api/fact-check` calls for each claim, deduplicates by `claim_text`
+- `use-fact-check.ts` — fires parallel `POST /api/fact-check` calls for each claim, deduplicates by `claim_text` via `lib/claim-dedupe.ts`
 
 ### Supabase schema
 Must be applied manually in the Supabase SQL editor — see `CONTEXT.md` for the full SQL. Two tables: `sessions` and `claims`, with a `verdict_type` enum.

@@ -100,17 +100,36 @@ SUPABASE_SERVICE_ROLE_KEY=sb_secret_...   # Secret key, not the anon key
 echo "NEXT_PUBLIC_BACKEND_URL=http://localhost:8000" > frontend/.env.local
 ```
 
-### 4. Start both services
+### 4. Install deps and git hooks
+
+```bash
+make install   # uv backend deps, npm ci, pre-commit + pre-push hooks
+```
+
+Quality gate (same suite as `git push`):
+
+```bash
+make check
+```
+
+### 5. Start both services
 
 ```bash
 # Terminal 1 — Backend
-cd backend && uv pip install -r requirements.txt && source .venv/bin/activate && uvicorn main:app --reload
+cd backend && source .venv/bin/activate && uvicorn main:app --reload
 
 # Terminal 2 — Frontend
-cd frontend && npm install && npm run dev
+cd frontend && npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+## Contributing / quality gates
+
+- Run `make install` once per clone so git hooks are active.
+- `pre-commit` formats/lints/scans secrets on commit; `pre-push` runs full `make check`.
+- Do not use `--no-verify` unless you are intentionally bypassing in an emergency (agents must not).
+- Unit tests: `backend/tests/`, frontend Vitest (`*.test.ts`). Manual Live scripts: `backend/scripts/`.
 
 ## API reference
 

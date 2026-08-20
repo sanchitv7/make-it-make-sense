@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { shouldCheckClaim } from "@/lib/claim-dedupe";
 import type { DetectedClaim, FactCheckResult, ContextPreset } from "@/types";
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 interface UseFactCheckOptions {
   sessionId: string;
@@ -29,9 +29,7 @@ export function useFactCheck({
 
   const checkClaim = useCallback(
     (claim: DetectedClaim) => {
-      // Deduplicate
-      if (checkedRef.current.has(claim.claim_text)) return;
-      checkedRef.current.add(claim.claim_text);
+      if (!shouldCheckClaim(checkedRef.current, claim.claim_text)) return;
 
       setCheckingIds((prev) => new Set(prev).add(claim.id));
 
@@ -80,7 +78,7 @@ export function useFactCheck({
           });
         });
     },
-    [sessionId, preset, speakerInfo]
+    [sessionId, preset, speakerInfo],
   );
 
   return { verdicts, checkingIds, checkClaim };

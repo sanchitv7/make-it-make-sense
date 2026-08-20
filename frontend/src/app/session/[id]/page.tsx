@@ -8,8 +8,7 @@ import { VerdictFeed } from "@/components/verdict-feed";
 import { TopBar } from "@/components/top-bar";
 import type { ContextPreset, DetectedClaim, Verdict } from "@/types";
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
 export default function SessionPage() {
   const params = useParams();
@@ -22,14 +21,18 @@ export default function SessionPage() {
   const [claims, setClaims] = useState<DetectedClaim[]>([]);
   const startedRef = useRef(false);
 
-  const { verdicts, checkingIds, checkClaim } = useFactCheck({ sessionId, preset, speakerInfo: contextDetail });
+  const { verdicts, checkingIds, checkClaim } = useFactCheck({
+    sessionId,
+    preset,
+    speakerInfo: contextDetail,
+  });
 
   const onClaim = useCallback(
     (claim: DetectedClaim) => {
       setClaims((prev) => [...prev, claim]);
       checkClaim(claim);
     },
-    [checkClaim]
+    [checkClaim],
   );
 
   const { isConnected, isPaused, start, stop, pause, resume } = useGeminiLive({
@@ -45,7 +48,9 @@ export default function SessionPage() {
   }, [start]);
 
   const checkingIdsRef = useRef(checkingIds);
-  useEffect(() => { checkingIdsRef.current = checkingIds; }, [checkingIds]);
+  useEffect(() => {
+    checkingIdsRef.current = checkingIds;
+  }, [checkingIds]);
 
   const handleStop = async () => {
     stop();
@@ -66,7 +71,12 @@ export default function SessionPage() {
   };
 
   // Verdict counts for top bar
-  const verdictCounts: Record<Verdict, number> = { TRUE: 0, FALSE: 0, MISLEADING: 0, UNVERIFIED: 0 };
+  const verdictCounts: Record<Verdict, number> = {
+    TRUE: 0,
+    FALSE: 0,
+    MISLEADING: 0,
+    UNVERIFIED: 0,
+  };
   for (const v of verdicts) verdictCounts[v.verdict]++;
 
   return (
@@ -82,13 +92,9 @@ export default function SessionPage() {
           onStop={handleStop}
         />
       </div>
-      <div className="w-full mx-auto px-6 md:px-12 py-8 max-w-[900px]">
+      <div className="mx-auto w-full max-w-[900px] px-6 py-8 md:px-12">
         <div>
-          <VerdictFeed
-            claims={claims}
-            verdicts={verdicts}
-            checkingIds={checkingIds}
-          />
+          <VerdictFeed claims={claims} verdicts={verdicts} checkingIds={checkingIds} />
         </div>
       </div>
     </div>

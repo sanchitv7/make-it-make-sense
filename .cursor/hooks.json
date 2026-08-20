@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": ".cursor/hooks/session-start.sh"
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/deny-no-verify.sh",
+        "matcher": "git\\s+(commit|push)",
+        "failClosed": true
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/stop-nudge.sh",
+        "loop_limit": 1
+      }
+    ]
+  }
+}

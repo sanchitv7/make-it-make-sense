@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { SplashHero } from '@/components/splash-hero';
-import { ContextSetup } from '@/components/context-setup';
+import { SplashHero } from "@/components/splash-hero";
+import { ContextSetup } from "@/components/context-setup";
 
 export default function Home() {
   const handleBeginClick = () => {
-    document.getElementById('setup-section')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById("setup-section")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (

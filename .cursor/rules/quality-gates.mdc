@@ -1,0 +1,15 @@
+---
+description: Local quality gates — make check, hooks, no --no-verify
+alwaysApply: true
+---
+
+# Quality gates
+
+- Shared entrypoint: `make check` (sectioned fail-fast). Same path as git `pre-push`.
+- While building: re-run failing sections or `make check` until green before push.
+- Ship: `git push` runs Maximal suite once via pre-push. Do not re-run a full suite solely because you are about to push.
+- Never use `git commit --no-verify` or `git push --no-verify`.
+- Setup: `make install` (deps + `pre-commit`/`pre-push` hooks).
+- Format: `make fmt` or rely on pre-commit; no ad-hoc formatter bypass.
+- Live Gemini scripts live under `backend/scripts/` — manual only, not in `make check`.
+- Commands map: see `CLAUDE.md` and the root `Makefile`.

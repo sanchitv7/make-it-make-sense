@@ -3,69 +3,69 @@
 
 :root {
   /* Backgrounds */
-  --bg-primary: #F5F0E8;
-  --bg-secondary: #EDE8DF;
-  --bg-tertiary: #E5DFD4;
-  --bg-card: #FEFCF8;
+  --bg-primary: #f5f0e8;
+  --bg-secondary: #ede8df;
+  --bg-tertiary: #e5dfd4;
+  --bg-card: #fefcf8;
 
   /* Borders */
-  --border-subtle: #D4CFC6;
-  --border-active: #B8B2A6;
+  --border-subtle: #d4cfc6;
+  --border-active: #b8b2a6;
 
   /* Text */
-  --text-primary: #1A1714;
-  --text-secondary: #5C564C;
-  --text-muted: #9B958A;
+  --text-primary: #1a1714;
+  --text-secondary: #5c564c;
+  --text-muted: #9b958a;
 
   /* Accents */
-  --accent-red: #8B1A2B;
-  --accent-blue: #2B5EA7;
-  --accent-green: #1A7A4C;
-  --accent-amber: #B8860B;
-  --accent-zinc: #7A7570;
-  --accent-gold: #8B7332;
+  --accent-red: #8b1a2b;
+  --accent-blue: #2b5ea7;
+  --accent-green: #1a7a4c;
+  --accent-amber: #b8860b;
+  --accent-zinc: #7a7570;
+  --accent-gold: #8b7332;
   --glow-red: rgba(139, 26, 43, 0.08);
   --card-shadow: 0 1px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
 /* Dark mode overrides */
 html.dark {
-  --bg-primary: #0C0D10;
-  --bg-secondary: #0F1014;
-  --bg-tertiary: #1C1E28;
+  --bg-primary: #0c0d10;
+  --bg-secondary: #0f1014;
+  --bg-tertiary: #1c1e28;
   --bg-card: #161820;
-  --border-subtle: #2A2C36;
-  --border-active: #3A3C48;
-  --text-primary: #E8E4D9;
-  --text-secondary: #9B978E;
-  --text-muted: #5A5750;
-  --accent-red: #C41E3A;
-  --accent-blue: #4A7BF7;
-  --accent-green: #34D399;
-  --accent-amber: #FBBF24;
-  --accent-zinc: #6B7280;
-  --accent-gold: #C9A84C;
+  --border-subtle: #2a2c36;
+  --border-active: #3a3c48;
+  --text-primary: #e8e4d9;
+  --text-secondary: #9b978e;
+  --text-muted: #5a5750;
+  --accent-red: #c41e3a;
+  --accent-blue: #4a7bf7;
+  --accent-green: #34d399;
+  --accent-amber: #fbbf24;
+  --accent-zinc: #6b7280;
+  --accent-gold: #c9a84c;
   --glow-red: rgba(196, 30, 58, 0.15);
   --card-shadow: 0 2px 16px rgba(0, 0, 0, 0.4), 0 0 1px rgba(201, 168, 76, 0.08);
 }
 
 html.dark .verdict-true {
-  color: #34D399;
+  color: #34d399;
   background-color: rgba(52, 211, 153, 0.15);
   border: 1px solid rgba(52, 211, 153, 0.3);
 }
 html.dark .verdict-false {
-  color: #EF4444;
+  color: #ef4444;
   background-color: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 html.dark .verdict-misleading {
-  color: #FBBF24;
+  color: #fbbf24;
   background-color: rgba(251, 191, 36, 0.15);
   border: 1px solid rgba(251, 191, 36, 0.3);
 }
 html.dark .verdict-unverified {
-  color: #6B7280;
+  color: #6b7280;
   background-color: rgba(107, 114, 128, 0.15);
   border: 1px solid rgba(107, 114, 128, 0.3);
 }
@@ -112,28 +112,28 @@ body {
 
 /* Verdict utility classes */
 .verdict-true {
-  color: #1A7A4C;
+  color: #1a7a4c;
   background-color: rgba(26, 122, 76, 0.1);
   border: 1px solid rgba(26, 122, 76, 0.25);
   box-shadow: 0 0 8px rgba(26, 122, 76, 0.08);
 }
 
 .verdict-false {
-  color: #B91C1C;
+  color: #b91c1c;
   background-color: rgba(185, 28, 28, 0.1);
   border: 1px solid rgba(185, 28, 28, 0.25);
   box-shadow: 0 0 8px rgba(185, 28, 28, 0.08);
 }
 
 .verdict-misleading {
-  color: #92400E;
+  color: #92400e;
   background-color: rgba(146, 64, 14, 0.1);
   border: 1px solid rgba(146, 64, 14, 0.25);
   box-shadow: 0 0 8px rgba(146, 64, 14, 0.08);
 }
 
 .verdict-unverified {
-  color: #57534E;
+  color: #57534e;
   background-color: rgba(87, 83, 78, 0.1);
   border: 1px solid rgba(87, 83, 78, 0.25);
   box-shadow: 0 0 8px rgba(87, 83, 78, 0.08);

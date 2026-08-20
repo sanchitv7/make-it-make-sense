@@ -16,18 +16,51 @@ interface TranscriptPanelProps {
   isPaused: boolean;
 }
 
-const VERDICT_CONFIG: Record<string, {
-  color: string;
-  glow: string;
-  bg: string;
-  label: string;
-  icon: string;
-}> = {
-  TRUE:       { color: "#22c55e", glow: "rgba(34,197,94,0.2)",   bg: "rgba(34,197,94,0.06)",   label: "VERIFIED",    icon: "✓" },
-  FALSE:      { color: "#ef4444", glow: "rgba(239,68,68,0.2)",   bg: "rgba(239,68,68,0.06)",   label: "FALSE",       icon: "✗" },
-  MISLEADING: { color: "#f59e0b", glow: "rgba(245,158,11,0.2)",  bg: "rgba(245,158,11,0.06)",  label: "MISLEADING",  icon: "⚠" },
-  UNVERIFIED: { color: "#71717a", glow: "rgba(113,113,122,0.15)", bg: "rgba(113,113,122,0.05)", label: "UNVERIFIED",  icon: "?" },
-  CHECKING:   { color: "#3b82f6", glow: "rgba(59,130,246,0.2)",  bg: "rgba(59,130,246,0.06)",  label: "CHECKING",    icon: "…" },
+const VERDICT_CONFIG: Record<
+  string,
+  {
+    color: string;
+    glow: string;
+    bg: string;
+    label: string;
+    icon: string;
+  }
+> = {
+  TRUE: {
+    color: "#22c55e",
+    glow: "rgba(34,197,94,0.2)",
+    bg: "rgba(34,197,94,0.06)",
+    label: "VERIFIED",
+    icon: "✓",
+  },
+  FALSE: {
+    color: "#ef4444",
+    glow: "rgba(239,68,68,0.2)",
+    bg: "rgba(239,68,68,0.06)",
+    label: "FALSE",
+    icon: "✗",
+  },
+  MISLEADING: {
+    color: "#f59e0b",
+    glow: "rgba(245,158,11,0.2)",
+    bg: "rgba(245,158,11,0.06)",
+    label: "MISLEADING",
+    icon: "⚠",
+  },
+  UNVERIFIED: {
+    color: "#71717a",
+    glow: "rgba(113,113,122,0.15)",
+    bg: "rgba(113,113,122,0.05)",
+    label: "UNVERIFIED",
+    icon: "?",
+  },
+  CHECKING: {
+    color: "#3b82f6",
+    glow: "rgba(59,130,246,0.2)",
+    bg: "rgba(59,130,246,0.06)",
+    label: "CHECKING",
+    icon: "…",
+  },
 };
 
 function ClaimBadge({ verdict }: { verdict: Verdict | "CHECKING" }) {
@@ -54,7 +87,9 @@ function ClaimBadge({ verdict }: { verdict: Verdict | "CHECKING" }) {
         position: "relative",
         top: "-1px",
         transition: "all 0.4s ease",
-        animation: isChecking ? "badge-pulse 1.5s ease-in-out infinite" : "badge-appear 0.3s ease forwards",
+        animation: isChecking
+          ? "badge-pulse 1.5s ease-in-out infinite"
+          : "badge-appear 0.3s ease forwards",
       }}
     >
       <span style={{ opacity: isChecking ? undefined : 1 }}>{cfg.icon}</span>
@@ -193,7 +228,8 @@ export function TranscriptPanel({
                 left: 0,
                 right: 0,
                 height: "1px",
-                background: "linear-gradient(90deg, transparent, rgba(59,130,246,0.15), transparent)",
+                background:
+                  "linear-gradient(90deg, transparent, rgba(59,130,246,0.15), transparent)",
                 animation: "scan-line 4s linear infinite",
               }}
             />
@@ -224,8 +260,8 @@ export function TranscriptPanel({
                   background: isPaused
                     ? "var(--accent-amber)"
                     : isConnected
-                    ? "var(--accent-red)"
-                    : "var(--text-muted)",
+                      ? "var(--accent-red)"
+                      : "var(--text-muted)",
                   animation: isConnected && !isPaused ? "status-breathe 2s ease infinite" : "none",
                 }}
               />
@@ -297,13 +333,13 @@ export function TranscriptPanel({
                       width: "2px",
                       height: `${h * 24}px`,
                       borderRadius: "1px",
-                      background: isConnected && !isPaused
-                        ? "var(--accent-blue)"
-                        : "var(--border-active)",
+                      background:
+                        isConnected && !isPaused ? "var(--accent-blue)" : "var(--border-active)",
                       opacity: isConnected && !isPaused ? 1 : 0.4,
-                      animation: isConnected && !isPaused
-                        ? `badge-pulse ${0.8 + i * 0.1}s ease-in-out ${i * 0.07}s infinite`
-                        : "none",
+                      animation:
+                        isConnected && !isPaused
+                          ? `badge-pulse ${0.8 + i * 0.1}s ease-in-out ${i * 0.07}s infinite`
+                          : "none",
                     }}
                   />
                 ))}
@@ -317,7 +353,11 @@ export function TranscriptPanel({
                   textTransform: "uppercase",
                 }}
               >
-                {isPaused ? "Microphone paused" : isConnected ? "Listening for speech…" : "Waiting for connection…"}
+                {isPaused
+                  ? "Microphone paused"
+                  : isConnected
+                    ? "Listening for speech…"
+                    : "Waiting for connection…"}
               </span>
             </div>
           ) : (
@@ -341,9 +381,7 @@ export function TranscriptPanel({
                 }
 
                 const verdict = verdictMap.get(seg.claimId) ?? "CHECKING";
-                return (
-                  <ClaimSegment key={seg.id} seg={seg} verdict={verdict} />
-                );
+                return <ClaimSegment key={seg.id} seg={seg} verdict={verdict} />;
               })}
 
               {/* Live cursor */}
@@ -396,9 +434,7 @@ export function TranscriptPanel({
               {Object.entries(VERDICT_CONFIG)
                 .filter(([k]) => k !== "CHECKING")
                 .map(([verdict, cfg]) => {
-                  const count = claimVerdicts.filter(
-                    (cv) => cv.verdict === verdict
-                  ).length;
+                  const count = claimVerdicts.filter((cv) => cv.verdict === verdict).length;
                   if (count === 0) return null;
                   return (
                     <span
@@ -414,7 +450,9 @@ export function TranscriptPanel({
                       }}
                     >
                       <span>{cfg.icon}</span>
-                      <span>{count} {cfg.label}</span>
+                      <span>
+                        {count} {cfg.label}
+                      </span>
                     </span>
                   );
                 })}

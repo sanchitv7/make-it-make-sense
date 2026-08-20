@@ -50,7 +50,7 @@ export default function RootLayout({
       className={`${instrumentSerif.variable} ${dmSans.variable} ${jetBrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col grain antialiased">
+      <body className="grain flex min-h-full flex-col antialiased">
         {children}
         <ThemeToggle />
         <Script id="sw-register" strategy="afterInteractive" src="/register-sw.js" />

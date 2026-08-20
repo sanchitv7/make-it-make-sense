@@ -1,7 +1,7 @@
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from supabase import create_client, Client
+from supabase import Client, create_client
 
 _client: Client | None = None
 
@@ -24,14 +24,7 @@ def create_session(preset: str, context_detail: str | None = None) -> str:
 
 
 def get_session(session_id: str) -> dict:
-    session = (
-        get_client()
-        .table("sessions")
-        .select("*")
-        .eq("id", session_id)
-        .single()
-        .execute()
-    )
+    session = get_client().table("sessions").select("*").eq("id", session_id).single().execute()
     claims = (
         get_client()
         .table("claims")
@@ -44,9 +37,9 @@ def get_session(session_id: str) -> dict:
 
 
 def end_session(session_id: str) -> None:
-    get_client().table("sessions").update(
-        {"ended_at": datetime.now(timezone.utc).isoformat()}
-    ).eq("id", session_id).execute()
+    get_client().table("sessions").update({"ended_at": datetime.now(UTC).isoformat()}).eq(
+        "id", session_id
+    ).execute()
 
 
 def upsert_claim(claim_data: dict) -> dict:

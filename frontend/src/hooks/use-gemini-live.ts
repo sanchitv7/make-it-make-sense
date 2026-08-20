@@ -4,8 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { DetectedClaim, ContextPreset } from "@/types";
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 const RECONNECT_BEFORE_MS = 13.5 * 60 * 1000;
 
 export type TranscriptSegment =
@@ -17,10 +16,7 @@ interface UseGeminiLiveOptions {
   onClaim: (claim: DetectedClaim) => void;
 }
 
-export function useGeminiLive({
-  preset,
-  onClaim,
-}: UseGeminiLiveOptions) {
+export function useGeminiLive({ preset, onClaim }: UseGeminiLiveOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
 
@@ -35,8 +31,12 @@ export function useGeminiLive({
   // ID of the current "open" text segment being streamed into
   const currentTextSegIdRef = useRef<string | null>(null);
 
-  useEffect(() => { presetRef.current = preset; }, [preset]);
-  useEffect(() => { onClaimRef.current = onClaim; }, [onClaim]);
+  useEffect(() => {
+    presetRef.current = preset;
+  }, [preset]);
+  useEffect(() => {
+    onClaimRef.current = onClaim;
+  }, [onClaim]);
 
   function teardownAudio() {
     workletRef.current?.disconnect();
@@ -52,10 +52,7 @@ export function useGeminiLive({
       const last = prev[prev.length - 1];
       if (last?.type === "text" && last.id === currentTextSegIdRef.current) {
         // Extend the last text segment
-        return [
-          ...prev.slice(0, -1),
-          { ...last, text: last.text + text },
-        ];
+        return [...prev.slice(0, -1), { ...last, text: last.text + text }];
       }
       // Start a new text segment
       const id = uuidv4();
@@ -118,7 +115,9 @@ export function useGeminiLive({
       }
       registerProcessor('pcm-proc', PCMProcessor);
     `;
-    const blobUrl = URL.createObjectURL(new Blob([workletCode], { type: "application/javascript" }));
+    const blobUrl = URL.createObjectURL(
+      new Blob([workletCode], { type: "application/javascript" }),
+    );
     await audioCtx.audioWorklet.addModule(blobUrl);
     URL.revokeObjectURL(blobUrl);
 
@@ -142,7 +141,13 @@ export function useGeminiLive({
     try {
       if (!mediaStreamRef.current) {
         mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
-          audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+          audio: {
+            sampleRate: 16000,
+            channelCount: 1,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
         });
         console.log("[Live] Mic acquired");
       }
@@ -160,7 +165,11 @@ export function useGeminiLive({
 
       ws.onmessage = async (event) => {
         let msg: Record<string, unknown>;
-        try { msg = JSON.parse(event.data); } catch { return; }
+        try {
+          msg = JSON.parse(event.data);
+        } catch {
+          return;
+        }
 
         const keys = Object.keys(msg);
         if (keys.length) console.log("[Live] ←", keys[0], JSON.stringify(msg).slice(0, 120));
@@ -184,9 +193,11 @@ export function useGeminiLive({
           }
         }
 
-        const tc = msg.toolCall as {
-          functionCalls?: { id: string; name: string; args: Record<string, unknown> }[]
-        } | undefined;
+        const tc = msg.toolCall as
+          | {
+              functionCalls?: { id: string; name: string; args: Record<string, unknown> }[];
+            }
+          | undefined;
         if (tc?.functionCalls) {
           for (const call of tc.functionCalls) {
             if (call.name === "report_claim") {
@@ -200,10 +211,12 @@ export function useGeminiLive({
                 timestamp_seconds: (call.args.timestamp_seconds as number) || 0,
                 context: (call.args.context as string) || undefined,
               });
-              ws.send(JSON.stringify({
-                type: "tool_response",
-                functionResponses: [{ id: call.id, name: call.name, response: { status: "ok" } }],
-              }));
+              ws.send(
+                JSON.stringify({
+                  type: "tool_response",
+                  functionResponses: [{ id: call.id, name: call.name, response: { status: "ok" } }],
+                }),
+              );
             }
           }
         }
@@ -228,7 +241,6 @@ export function useGeminiLive({
           ws.close();
         }
       }, RECONNECT_BEFORE_MS);
-
     } catch (err) {
       console.error("[Live] connect error:", err);
       setIsConnected(false);
@@ -250,7 +262,13 @@ export function useGeminiLive({
     if (!isPaused) return;
     try {
       mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
       });
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         await startAudio(wsRef.current);
@@ -273,7 +291,10 @@ export function useGeminiLive({
   const stop = useCallback(() => {
     setIsPaused(false);
     stoppedRef.current = true;
-    if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: "stop" }));
     }
@@ -285,7 +306,13 @@ export function useGeminiLive({
     setIsConnected(false);
   }, []);
 
-  useEffect(() => () => { stoppedRef.current = true; stop(); }, [stop]);
+  useEffect(
+    () => () => {
+      stoppedRef.current = true;
+      stop();
+    },
+    [stop],
+  );
 
   return { isConnected, isPaused, segments, start, stop, pause, resume };
 }

@@ -1,0 +1,60 @@
+[project]
+name = "make-it-make-sense-backend"
+version = "0.1.0"
+description = "FastAPI backend for Make It Make Sense"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "google-genai",
+  "supabase",
+  "pydantic",
+  "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.9.0",
+  "mypy>=1.14.0",
+  "pytest>=8.0.0",
+  "types-requests",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+exclude = ["scripts", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+  "E501",
+  "B008",
+  "B005",  # rempref-style www. strip is intentional
+  "B904",  # HTTPException re-raise style in FastAPI handlers
+  "UP042", # str Enum keeps JSON compatibility with existing API
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = false
+allow_untyped_defs = true
+exclude = ["scripts/", ".venv/", "tests/"]
+
+[[tool.mypy.overrides]]
+module = ["google.*", "supabase.*", "dotenv.*"]
+ignore_missing_imports = true
+
+# Gradual: third-party SDK surfaces are noisy until typed stubs catch up
+[[tool.mypy.overrides]]
+module = ["main", "supabase_client", "fact_check"]
+ignore_errors = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
