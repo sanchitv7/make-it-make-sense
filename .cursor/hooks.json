@@ -11,6 +11,11 @@
         "command": ".cursor/hooks/deny-no-verify.sh",
         "matcher": "git\\s+(commit|push)",
         "failClosed": true
+      },
+      {
+        "command": ".cursor/hooks/require-pr-up-to-date.sh",
+        "matcher": "\\bgh\\b",
+        "failClosed": true
       }
     ],
     "stop": [

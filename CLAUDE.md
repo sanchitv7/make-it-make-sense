@@ -16,6 +16,8 @@ make lint typecheck test build smoke-backend   # individual targets
 
 Never use `git commit --no-verify` or `git push --no-verify`. Ship via normal `git push` (runs `make check` once).
 
+Before `gh pr create`, update from `origin/main` (merge or rebase) so the branch contains main and has no conflicts — Cursor hook enforces this for agents. GitHub does not gate merge on up-to-date.
+
 ### Backend
 ```bash
 cd backend && source .venv/bin/activate && uvicorn main:app --reload
