@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { FormEvent, useEffect, useId, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
@@ -10,8 +10,37 @@ type AuthMode = "signin" | "signup" | "forgot";
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
-  /** Called after a successful sign-in or sign-up. */
   onSuccess?: () => void;
+}
+
+function modeTitle(mode: AuthMode): string {
+  switch (mode) {
+    case "signup":
+      return "Create account";
+    case "forgot":
+      return "Reset password";
+    case "signin":
+      return "Sign in";
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
+}
+
+function submitLabel(mode: AuthMode): string {
+  switch (mode) {
+    case "forgot":
+      return "Send reset link";
+    case "signup":
+      return "Create account";
+    case "signin":
+      return "Continue";
+    default: {
+      const _exhaustive: never = mode;
+      return _exhaustive;
+    }
+  }
 }
 
 export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
@@ -43,14 +72,13 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const title =
-    mode === "signup"
-      ? "Create account"
-      : mode === "forgot"
-        ? "Reset password"
-        : "Sign in";
+  function switchMode(next: AuthMode) {
+    setMode(next);
+    setError(null);
+    setInfo(null);
+  }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setInfo(null);
@@ -122,7 +150,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
               id={titleId}
               className="font-[family:var(--font-display)] text-2xl text-[var(--text-primary)] mb-1 pr-8"
             >
-              {title}
+              {modeTitle(mode)}
             </h2>
             <p className="font-[family:var(--font-body)] text-sm text-[var(--text-secondary)] mb-6">
               {mode === "forgot"
@@ -183,13 +211,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
                 className="h-12 mt-1 font-[family:var(--font-display)] font-bold uppercase tracking-[0.15em] text-sm text-white cursor-pointer disabled:opacity-60"
                 style={{ backgroundColor: "var(--accent-red)" }}
               >
-                {submitting
-                  ? "…"
-                  : mode === "forgot"
-                    ? "Send reset link"
-                    : mode === "signup"
-                      ? "Create account"
-                      : "Continue"}
+                {submitting ? "…" : submitLabel(mode)}
               </button>
             </form>
 
@@ -199,22 +221,14 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
                   <button
                     type="button"
                     className="text-left underline underline-offset-2 cursor-pointer hover:text-[var(--text-primary)]"
-                    onClick={() => {
-                      setMode("forgot");
-                      setError(null);
-                      setInfo(null);
-                    }}
+                    onClick={() => switchMode("forgot")}
                   >
                     Forgot password?
                   </button>
                   <button
                     type="button"
                     className="text-left cursor-pointer hover:text-[var(--text-primary)]"
-                    onClick={() => {
-                      setMode("signup");
-                      setError(null);
-                      setInfo(null);
-                    }}
+                    onClick={() => switchMode("signup")}
                   >
                     Need an account?{" "}
                     <span className="underline underline-offset-2">Create one</span>
@@ -225,11 +239,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
                 <button
                   type="button"
                   className="text-left cursor-pointer hover:text-[var(--text-primary)]"
-                  onClick={() => {
-                    setMode("signin");
-                    setError(null);
-                    setInfo(null);
-                  }}
+                  onClick={() => switchMode("signin")}
                 >
                   Already have an account?{" "}
                   <span className="underline underline-offset-2">Sign in</span>
@@ -239,11 +249,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
                 <button
                   type="button"
                   className="text-left underline underline-offset-2 cursor-pointer hover:text-[var(--text-primary)]"
-                  onClick={() => {
-                    setMode("signin");
-                    setError(null);
-                    setInfo(null);
-                  }}
+                  onClick={() => switchMode("signin")}
                 >
                   Back to sign in
                 </button>

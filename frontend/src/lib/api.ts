@@ -1,6 +1,7 @@
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
+/** Absolute URL for a FastAPI path (supports query strings). */
 export function backendUrl(path: string): string {
   const base = BACKEND_URL.replace(/\/$/, "");
   const suffix = path.startsWith("/") ? path : `/${path}`;

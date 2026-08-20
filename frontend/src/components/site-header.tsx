@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 
 interface SiteHeaderProps {
@@ -12,22 +11,12 @@ const authControlClassName =
 
 export function SiteHeader({ onSignInClick }: SiteHeaderProps) {
   const { user, loading, signOut } = useAuth();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const showAuthControls = mounted && !loading;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 flex items-center justify-end px-6 md:px-12 py-4 bg-[var(--bg-primary)] border-b border-[var(--border-subtle)]">
       <div className="flex items-center gap-4">
-        {!showAuthControls ? (
-          <div
-            className="min-h-10 min-w-[5.5rem]"
-            aria-hidden="true"
-          />
+        {loading ? (
+          <div className="min-h-10 min-w-[5.5rem]" aria-hidden="true" />
         ) : user ? (
           <>
             <span

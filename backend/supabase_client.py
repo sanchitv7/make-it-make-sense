@@ -31,28 +31,7 @@ def create_session(
     return result.data[0]["id"]
 
 
-def get_session(session_id: str) -> dict:
-    session = (
-        get_client()
-        .table("sessions")
-        .select("*")
-        .eq("id", session_id)
-        .single()
-        .execute()
-    )
-    claims = (
-        get_client()
-        .table("claims")
-        .select("*")
-        .eq("session_id", session_id)
-        .order("timestamp_seconds")
-        .execute()
-    )
-    return {**session.data, "claims": claims.data}
-
-
-def assert_session_owner(session_id: str, user_id: str) -> dict:
-    """Load a session and ensure it belongs to `user_id`. Raises 403/404."""
+def _fetch_session_row(session_id: str) -> dict:
     try:
         session = (
             get_client()
@@ -67,8 +46,12 @@ def assert_session_owner(session_id: str, user_id: str) -> dict:
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found",
         ) from exc
+    return session.data
 
-    data = session.data
+
+def assert_session_owner(session_id: str, user_id: str) -> dict:
+    """Load a session and ensure it belongs to `user_id`. Raises 403/404."""
+    data = _fetch_session_row(session_id)
     owner = data.get("user_id")
     if owner is None or owner != user_id:
         raise HTTPException(
@@ -76,6 +59,24 @@ def assert_session_owner(session_id: str, user_id: str) -> dict:
             detail="Not allowed to access this session",
         )
     return data
+
+
+def get_session(session_id: str, *, user_id: str | None = None) -> dict:
+    """Load session + claims. When `user_id` is set, enforce ownership in one row fetch."""
+    data = (
+        assert_session_owner(session_id, user_id)
+        if user_id is not None
+        else _fetch_session_row(session_id)
+    )
+    claims = (
+        get_client()
+        .table("claims")
+        .select("*")
+        .eq("session_id", session_id)
+        .order("timestamp_seconds")
+        .execute()
+    )
+    return {**data, "claims": claims.data}
 
 
 def end_session(session_id: str) -> None:

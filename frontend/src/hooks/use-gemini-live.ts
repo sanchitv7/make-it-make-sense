@@ -3,9 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { DetectedClaim, ContextPreset } from "@/types";
+import { backendUrl } from "@/lib/api";
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 const RECONNECT_BEFORE_MS = 13.5 * 60 * 1000;
 
 export type TranscriptSegment =
@@ -159,12 +158,14 @@ export function useGeminiLive({
         return;
       }
 
-      const wsBase = BACKEND_URL.replace(/^http/, "ws");
       const params = new URLSearchParams({
         preset: presetRef.current,
         access_token: token,
       });
-      const wsUrl = `${wsBase}/ws/live?${params.toString()}`;
+      const wsUrl = backendUrl(`/ws/live?${params.toString()}`).replace(
+        /^http/,
+        "ws",
+      );
       console.log("[Live] Connecting to proxy:", wsUrl.replace(token, "[token]"));
 
       const ws = new WebSocket(wsUrl);

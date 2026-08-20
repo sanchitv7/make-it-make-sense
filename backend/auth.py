@@ -20,14 +20,13 @@ def verify_access_token(token: str) -> str:
             detail="Invalid or expired token",
         ) from exc
 
-    user = getattr(result, "user", None)
-    user_id = getattr(user, "id", None) if user is not None else None
-    if not isinstance(user_id, str) or not user_id:
+    user = result.user
+    if user is None or not user.id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
         )
-    return user_id
+    return str(user.id)
 
 
 async def require_user(

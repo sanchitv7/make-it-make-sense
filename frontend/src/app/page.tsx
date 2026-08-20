@@ -26,13 +26,12 @@ export default function Home() {
   };
 
   const handleAuthSuccess = () => {
-    if (pendingBegin) {
-      setPendingBegin(false);
-      // Wait a tick for ContextSetup to mount after auth state updates.
-      requestAnimationFrame(() => {
-        setTimeout(scrollToSetup, 50);
-      });
-    }
+    if (!pendingBegin) return;
+    setPendingBegin(false);
+    // ContextSetup mounts after auth state updates — defer scroll until then.
+    requestAnimationFrame(() => {
+      setTimeout(scrollToSetup, 50);
+    });
   };
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { createClient } from "@/lib/supabase/client";
@@ -90,9 +91,9 @@ export default function ResetPasswordPage() {
         ) : !user ? (
           <p className="text-sm text-[var(--text-secondary)]">
             This reset link is invalid or expired.{" "}
-            <a href="/" className="underline underline-offset-2 text-[var(--accent-blue)]">
+            <Link href="/" className="underline underline-offset-2 text-[var(--accent-blue)]">
               Return home
-            </a>{" "}
+            </Link>{" "}
             and try again.
             {error ? (
               <span className="block mt-2 text-[var(--accent-red)]">{error}</span>

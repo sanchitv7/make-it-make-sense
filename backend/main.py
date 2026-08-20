@@ -237,8 +237,7 @@ async def get_session(
     user_id: str = Depends(require_user),
 ):
     try:
-        supabase_client.assert_session_owner(session_id, user_id)
-        return supabase_client.get_session(session_id)
+        return supabase_client.get_session(session_id, user_id=user_id)
     except HTTPException:
         raise
     except Exception as e:
