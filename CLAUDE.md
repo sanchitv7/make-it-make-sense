@@ -9,12 +9,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 make install          # backend+frontend deps + git hooks (pre-commit, pre-push)
 make hooks            # install/reinstall git hooks only
+make sync-main        # fetch + update local main to origin/main (start new tasks here)
 make fmt              # ruff + prettier
 make check            # Maximal suite (same as pre-push) — sectioned fail-fast
 make lint typecheck test build smoke-backend   # individual targets
 ```
 
 Never use `git commit --no-verify` or `git push --no-verify`. Ship via normal `git push` (runs `make check` once).
+
+New task / worktree: run `make sync-main`, then create the branch from updated main. Cursor blocks `git switch -c` / `checkout -b` / `worktree add` if HEAD does not contain `origin/main`.
 
 Before `gh pr create`, update from `origin/main` (merge or rebase) so the branch contains main and has no conflicts — Cursor hook enforces this for agents. GitHub does not gate merge on up-to-date.
 
