@@ -80,18 +80,26 @@ def _to_browser_msg(response) -> dict | None:
 async def live_ws(
     websocket: WebSocket,
     preset: str = Query(default="podcast"),
-    access_token: str | None = Query(default=None),
 ):
-    # Accept first so we can close cleanly on auth failure.
+    # Accept first; auth is the first client message (not a query param).
     await websocket.accept()
-    if not access_token:
+    try:
+        raw = await asyncio.wait_for(websocket.receive_text(), timeout=10)
+        auth_msg = json.loads(raw)
+    except (asyncio.TimeoutError, json.JSONDecodeError, WebSocketDisconnect):
+        await websocket.close(code=4401, reason="Unauthorized")
+        return
+
+    if auth_msg.get("type") != "auth" or not auth_msg.get("access_token"):
         await websocket.close(code=4401, reason="Unauthorized")
         return
     try:
-        verify_access_token(access_token)
+        verify_access_token(auth_msg["access_token"])
     except HTTPException:
         await websocket.close(code=4401, reason="Unauthorized")
         return
+
+    await websocket.send_text(json.dumps({"type": "auth_ok"}))
 
     system_instruction = PROMPTS.get(preset, PROMPTS["podcast"])
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])

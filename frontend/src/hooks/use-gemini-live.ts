@@ -160,18 +160,21 @@ export function useGeminiLive({
 
       const params = new URLSearchParams({
         preset: presetRef.current,
-        access_token: token,
       });
       const wsUrl = backendUrl(`/ws/live?${params.toString()}`).replace(
         /^http/,
         "ws",
       );
-      console.log("[Live] Connecting to proxy:", wsUrl.replace(token, "[token]"));
+      console.log("[Live] Connecting to proxy:", wsUrl);
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
+      let authAccepted = false;
 
-      ws.onopen = () => console.log("[Live] WS open");
+      ws.onopen = () => {
+        console.log("[Live] WS open — sending auth");
+        ws.send(JSON.stringify({ type: "auth", access_token: token }));
+      };
 
       ws.onmessage = async (event) => {
         let msg: Record<string, unknown>;
@@ -180,7 +183,18 @@ export function useGeminiLive({
         const keys = Object.keys(msg);
         if (keys.length) console.log("[Live] ←", keys[0], JSON.stringify(msg).slice(0, 120));
 
+        if (msg.type === "auth_ok") {
+          console.log("[Live] Auth accepted");
+          authAccepted = true;
+          return;
+        }
+
         if ("setupComplete" in msg) {
+          if (!authAccepted) {
+            console.error("[Live] setupComplete before auth_ok — closing");
+            ws.close();
+            return;
+          }
           console.log("[Live] Setup complete — starting audio");
           setIsConnected(true);
           await startAudio(ws);

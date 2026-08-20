@@ -57,7 +57,7 @@ Guests see the splash and how-it-works only. An Account is required to Begin and
 
 1. Account signs in (or creates an account) via the auth modal
 2. Account picks a context preset → `POST /api/session` (JWT) creates a Session with `user_id`
-3. Session page opens → `/ws/live?access_token=…` proxies mic audio to Gemini Live
+3. Session page opens → `/ws/live` auth message then proxies mic audio to Gemini Live
 4. Each detected claim → `POST /api/fact-check` (JWT + ownership check)
 5. On stop → `PATCH /api/session/{id}` → summary page
 
@@ -70,7 +70,7 @@ Guests see the splash and how-it-works only. An Account is required to Begin and
 | POST | `/api/session` | JWT | Create Session for Account |
 | GET | `/api/session/{id}` | JWT + ownership | Get Session + claims |
 | PATCH | `/api/session/{id}` | JWT + ownership | End Session |
-| WS | `/ws/live` | JWT query param | Live audio proxy |
+| WS | `/ws/live` | JWT first message | Live audio proxy |
 
 ## Env Vars
 
@@ -111,6 +111,11 @@ CREATE TABLE claims (
 
 CREATE INDEX idx_claims_session ON claims(session_id);
 CREATE INDEX sessions_user_id_idx ON sessions(user_id);
+
+-- Deny anon/authenticated direct table access; service role bypasses RLS.
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
+-- no policies: anon/authenticated denied; service role bypasses
 ```
 
 Existing projects: run [`docs/supabase-auth-migration.sql`](docs/supabase-auth-migration.sql).

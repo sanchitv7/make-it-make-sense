@@ -71,6 +71,11 @@ CREATE TABLE claims (
 
 CREATE INDEX idx_claims_session ON claims(session_id);
 CREATE INDEX sessions_user_id_idx ON sessions(user_id);
+
+-- Deny anon/authenticated direct table access; service role bypasses RLS.
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
+-- no policies: anon/authenticated denied; service role bypasses
 ```
 
 ### 2. Configure Supabase Auth
@@ -125,7 +130,7 @@ Open [http://localhost:3000](http://localhost:3000). Guests see the splash; **Be
 | `POST` | `/api/session` | JWT | Create a new session |
 | `GET` | `/api/session/{id}` | JWT + ownership | Get session + all claims |
 | `PATCH` | `/api/session/{id}` | JWT + ownership | End session |
-| `WS` | `/ws/live` | JWT (`access_token` query) | Live audio proxy |
+| `WS` | `/ws/live` | JWT first message (`type: auth`) | Live audio proxy |
 
 ## Key modules
 
