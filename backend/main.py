@@ -4,24 +4,24 @@ import json
 import logging
 import os
 
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, Query
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.websockets import WebSocketDisconnect
-from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+import supabase_client
 from auth import require_user, verify_access_token
 from fact_check import fact_check_claim, init_pool
 from models import (
-    FactCheckRequest,
-    FactCheckResponse,
     CreateSessionRequest,
     CreateSessionResponse,
+    FactCheckRequest,
+    FactCheckResponse,
     SessionDetail,
 )
 from prompts import PROMPTS
-import supabase_client
 
 load_dotenv()
 
@@ -33,6 +33,7 @@ app = FastAPI(title="Make It Make Sense", version="0.1.0")
 _cors_origins = ["http://localhost:3000"]
 if _extra := os.environ.get("ALLOWED_ORIGINS"):
     _cors_origins.extend(o.strip() for o in _extra.split(",") if o.strip())
+
 
 @app.on_event("startup")
 async def startup():
@@ -70,8 +71,10 @@ def _to_browser_msg(response) -> dict | None:
             sc_dict["turnComplete"] = True
         return {"serverContent": sc_dict} if sc_dict else None
     if response.tool_call is not None:
-        calls = [{"id": fc.id, "name": fc.name, "args": fc.args}
-                 for fc in (response.tool_call.function_calls or [])]
+        calls = [
+            {"id": fc.id, "name": fc.name, "args": fc.args}
+            for fc in (response.tool_call.function_calls or [])
+        ]
         return {"toolCall": {"functionCalls": calls}}
     return None
 
@@ -86,7 +89,7 @@ async def live_ws(
     try:
         raw = await asyncio.wait_for(websocket.receive_text(), timeout=10)
         auth_msg = json.loads(raw)
-    except (asyncio.TimeoutError, json.JSONDecodeError, WebSocketDisconnect):
+    except (TimeoutError, json.JSONDecodeError, WebSocketDisconnect):
         await websocket.close(code=4401, reason="Unauthorized")
         return
 
@@ -118,21 +121,32 @@ async def live_ws(
         context_window_compression=types.ContextWindowCompressionConfig(
             sliding_window=types.SlidingWindow(),
         ),
-        tools=[types.Tool(function_declarations=[
-            types.FunctionDeclaration(
-                name="report_claim",
-                description="Report a verifiable factual claim heard in the audio",
-                parameters=types.Schema(
-                    type="OBJECT",
-                    properties={
-                        "claim_text": types.Schema(type="STRING", description="The claim verbatim"),
-                        "timestamp_seconds": types.Schema(type="INTEGER", description="Seconds since session start"),
-                        "context": types.Schema(type="STRING", description="1-2 surrounding sentences providing context for the claim (who is speaking, what they were discussing)"),
-                    },
-                    required=["claim_text", "timestamp_seconds"],
-                ),
+        tools=[
+            types.Tool(
+                function_declarations=[
+                    types.FunctionDeclaration(
+                        name="report_claim",
+                        description="Report a verifiable factual claim heard in the audio",
+                        parameters=types.Schema(
+                            type="OBJECT",
+                            properties={
+                                "claim_text": types.Schema(
+                                    type="STRING", description="The claim verbatim"
+                                ),
+                                "timestamp_seconds": types.Schema(
+                                    type="INTEGER", description="Seconds since session start"
+                                ),
+                                "context": types.Schema(
+                                    type="STRING",
+                                    description="1-2 surrounding sentences providing context for the claim (who is speaking, what they were discussing)",
+                                ),
+                            },
+                            required=["claim_text", "timestamp_seconds"],
+                        ),
+                    )
+                ]
             )
-        ])],
+        ],
     )
 
     try:
@@ -153,8 +167,11 @@ async def live_ws(
                             )
                         elif data.get("type") == "tool_response":
                             responses = [
-                                types.FunctionResponse(id=fr["id"], name=fr["name"], response=fr["response"])
-                                for fr in data.get("functionResponses", []) if fr.get("id")
+                                types.FunctionResponse(
+                                    id=fr["id"], name=fr["name"], response=fr["response"]
+                                )
+                                for fr in data.get("functionResponses", [])
+                                if fr.get("id")
                             ]
                             if responses:
                                 await session.send_tool_response(function_responses=responses)

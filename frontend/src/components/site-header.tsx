@@ -13,32 +13,24 @@ export function SiteHeader({ onSignInClick }: SiteHeaderProps) {
   const { user, loading, signOut } = useAuth();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 flex items-center justify-end px-6 md:px-12 py-4 bg-[var(--bg-primary)] border-b border-[var(--border-subtle)]">
+    <header className="fixed top-0 right-0 left-0 z-40 flex items-center justify-end border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-6 py-4 md:px-12">
       <div className="flex items-center gap-4">
         {loading ? (
           <div className="min-h-10 min-w-[5.5rem]" aria-hidden="true" />
         ) : user ? (
           <>
             <span
-              className="hidden sm:inline font-[family:var(--font-body)] text-sm text-[var(--text-secondary)] max-w-[200px] truncate"
+              className="hidden max-w-[200px] truncate text-sm font-[family:var(--font-body)] text-[var(--text-secondary)] sm:inline"
               title={user.email ?? undefined}
             >
               {user.email}
             </span>
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className={authControlClassName}
-            >
+            <button type="button" onClick={() => void signOut()} className={authControlClassName}>
               Sign out
             </button>
           </>
         ) : (
-          <button
-            type="button"
-            onClick={onSignInClick}
-            className={authControlClassName}
-          >
+          <button type="button" onClick={onSignInClick} className={authControlClassName}>
             Sign in
           </button>
         )}

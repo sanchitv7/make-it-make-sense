@@ -10,17 +10,21 @@ import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
 
 const VERDICT_CONFIG: Record<Verdict, { color: string; className: string; label: string }> = {
-  TRUE:       { color: 'var(--accent-green)', className: 'verdict-true',       label: 'TRUE'        },
-  FALSE:      { color: '#B91C1C',             className: 'verdict-false',      label: 'FALSE'       },
-  MISLEADING: { color: 'var(--accent-amber)', className: 'verdict-misleading', label: 'MISLEADING'  },
-  UNVERIFIED: { color: 'var(--accent-zinc)',  className: 'verdict-unverified', label: 'UNVERIFIED'  },
+  TRUE: { color: "var(--accent-green)", className: "verdict-true", label: "TRUE" },
+  FALSE: { color: "#B91C1C", className: "verdict-false", label: "FALSE" },
+  MISLEADING: {
+    color: "var(--accent-amber)",
+    className: "verdict-misleading",
+    label: "MISLEADING",
+  },
+  UNVERIFIED: { color: "var(--accent-zinc)", className: "verdict-unverified", label: "UNVERIFIED" },
 };
 
 const PRESET_LABELS: Record<string, string> = {
   political: "Political Speech",
-  news:      "News Broadcast",
-  earnings:  "Earnings Call",
-  podcast:   "Podcast / Talk",
+  news: "News Broadcast",
+  earnings: "Earnings Call",
+  podcast: "Podcast / Talk",
 };
 
 function formatTimestamp(seconds: number): string {
@@ -30,14 +34,14 @@ function formatTimestamp(seconds: number): string {
 }
 
 export default function SummaryPage() {
-  const params  = useParams();
-  const router  = useRouter();
+  const params = useParams();
+  const router = useRouter();
   const sessionId = params.id as string;
   const { accessToken, loading: authLoading, user } = useAuth();
 
-  const [session, setSession]   = useState<SessionDetailResponse | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [copied,  setCopied]    = useState(false);
+  const [session, setSession] = useState<SessionDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -47,7 +51,10 @@ export default function SummaryPage() {
       return;
     }
     apiFetch(`/api/session/${sessionId}`, accessToken)
-      .then((res) => { if (!res.ok) throw new Error(); return res.json(); })
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
       .then(setSession)
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -61,12 +68,12 @@ export default function SummaryPage() {
 
   if (loading || authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--bg-primary)]">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg-primary)]">
         <motion.p
           initial={{ opacity: 0.4 }}
           animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          className="italic text-2xl font-[family:var(--font-display)] text-[var(--text-secondary)]"
+          className="text-2xl font-[family:var(--font-display)] text-[var(--text-secondary)] italic"
         >
           Loading session…
         </motion.p>
@@ -76,13 +83,13 @@ export default function SummaryPage() {
 
   if (!user || !session) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--bg-primary)] gap-4">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--bg-primary)]">
         <p className="text-xl font-[family:var(--font-display)] text-[var(--text-secondary)]">
           {!user ? "Sign in to view this session." : "Session not found."}
         </p>
         <Link
           href="/"
-          className="underline uppercase tracking-widest text-xs font-[family:var(--font-mono)] text-[var(--accent-blue)]"
+          className="text-xs font-[family:var(--font-mono)] tracking-widest text-[var(--accent-blue)] uppercase underline"
         >
           Return Home
         </Link>
@@ -90,13 +97,15 @@ export default function SummaryPage() {
     );
   }
 
-  const totalClaims  = session.claims.length;
-  const presetLabel  = PRESET_LABELS[session.context_preset] || session.context_preset;
+  const totalClaims = session.claims.length;
+  const presetLabel = PRESET_LABELS[session.context_preset] || session.context_preset;
 
   return (
-    <main className="min-h-screen text-[var(--text-primary)] py-16 px-6 md:px-12" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <main
+      className="min-h-screen px-6 py-16 text-[var(--text-primary)] md:px-12"
+      style={{ backgroundColor: "var(--bg-primary)" }}
+    >
       <div className="mx-auto w-full max-w-[900px]">
-
         {/* ── Header ── */}
         <motion.header
           initial={{ opacity: 0, y: 20 }}
@@ -105,30 +114,43 @@ export default function SummaryPage() {
           className="mb-12"
         >
           {/* eyebrow */}
-          <div className="flex items-center gap-2 mb-4 text-[10px] uppercase tracking-[0.2em] font-[family:var(--font-mono)] text-[var(--text-secondary)]">
+          <div className="mb-4 flex items-center gap-2 text-[10px] font-[family:var(--font-mono)] tracking-[0.2em] text-[var(--text-secondary)] uppercase">
             <span>{presetLabel}</span>
             <span className="text-[var(--text-muted)]">•</span>
-            <span>{totalClaims} {totalClaims === 1 ? "CLAIM" : "CLAIMS"}</span>
+            <span>
+              {totalClaims} {totalClaims === 1 ? "CLAIM" : "CLAIMS"}
+            </span>
           </div>
 
           {/* title */}
-          <h1 className="font-[family:var(--font-display)] text-[var(--text-primary)] leading-[0.95]" style={{ fontStyle: 'italic', fontSize: 'clamp(3.5rem, 10vw, 6rem)' }}>
+          <h1
+            className="leading-[0.95] font-[family:var(--font-display)] text-[var(--text-primary)]"
+            style={{ fontStyle: "italic", fontSize: "clamp(3.5rem, 10vw, 6rem)" }}
+          >
             The Verdict
           </h1>
 
           {session.context_detail && (
-            <p className="mt-4 text-base font-[family:var(--font-body)] text-[var(--text-secondary)]" style={{ fontStyle: 'italic' }}>
+            <p
+              className="mt-4 text-base font-[family:var(--font-body)] text-[var(--text-secondary)]"
+              style={{ fontStyle: "italic" }}
+            >
               {session.context_detail}
             </p>
           )}
 
-          <div className="mt-6 h-[2px] w-full" style={{ background: 'linear-gradient(to right, var(--accent-red), var(--accent-gold))' }} />
+          <div
+            className="mt-6 h-[2px] w-full"
+            style={{
+              background: "linear-gradient(to right, var(--accent-red), var(--accent-gold))",
+            }}
+          />
         </motion.header>
 
         {/* ── Verdict Bar ── */}
         {totalClaims > 0 && (
           <section className="mb-16">
-            <div className="flex h-4 w-full bg-[var(--bg-card)] overflow-hidden">
+            <div className="flex h-4 w-full overflow-hidden bg-[var(--bg-card)]">
               {(Object.keys(VERDICT_CONFIG) as Verdict[]).map((v) => {
                 const count = verdictCounts[v];
                 if (count === 0) return null;
@@ -144,16 +166,29 @@ export default function SummaryPage() {
                 );
               })}
             </div>
-            <div className="flex flex-wrap gap-6 mt-5">
+            <div className="mt-5 flex flex-wrap gap-6">
               {(Object.keys(VERDICT_CONFIG) as Verdict[]).map((v) => {
                 const count = verdictCounts[v];
                 if (count === 0) return null;
                 return (
-                  <div key={v} className="flex flex-col gap-0.5" style={{ borderLeft: `3px solid ${VERDICT_CONFIG[v].color}`, paddingLeft: '12px' }}>
-                    <span className="font-[family:var(--font-display)] leading-none" style={{ fontSize: '2rem', color: VERDICT_CONFIG[v].color }}>
+                  <div
+                    key={v}
+                    className="flex flex-col gap-0.5"
+                    style={{
+                      borderLeft: `3px solid ${VERDICT_CONFIG[v].color}`,
+                      paddingLeft: "12px",
+                    }}
+                  >
+                    <span
+                      className="leading-none font-[family:var(--font-display)]"
+                      style={{ fontSize: "2rem", color: VERDICT_CONFIG[v].color }}
+                    >
                       {count}
                     </span>
-                    <span className="font-[family:var(--font-mono)] uppercase tracking-widest text-[var(--text-muted)]" style={{ fontSize: '0.8rem' }}>
+                    <span
+                      className="font-[family:var(--font-mono)] tracking-widest text-[var(--text-muted)] uppercase"
+                      style={{ fontSize: "0.8rem" }}
+                    >
                       {v}
                     </span>
                   </div>
@@ -164,7 +199,7 @@ export default function SummaryPage() {
         )}
 
         {/* ── Claims ── */}
-        <div className="flex flex-col gap-12 mb-20">
+        <div className="mb-20 flex flex-col gap-12">
           <AnimatePresence>
             {session.claims.map((claim, index) => {
               const config = VERDICT_CONFIG[claim.verdict];
@@ -176,36 +211,52 @@ export default function SummaryPage() {
                   transition={{ delay: index * 0.1 }}
                   className="flex flex-col gap-6"
                 >
-                  <div className="flex gap-6 items-start">
-                    <span className="text-2xl md:text-3xl font-[family:var(--font-display)] text-[var(--accent-gold)] opacity-30">
+                  <div className="flex items-start gap-6">
+                    <span className="text-2xl font-[family:var(--font-display)] text-[var(--accent-gold)] opacity-30 md:text-3xl">
                       {(index + 1).toString().padStart(2, "0")}
                     </span>
                     <div className="flex-1">
                       <div
                         className="relative overflow-hidden"
                         style={{
-                          backgroundColor: 'var(--bg-card)',
-                          border: '1px solid var(--border-subtle)',
+                          backgroundColor: "var(--bg-card)",
+                          border: "1px solid var(--border-subtle)",
                           borderRadius: 0,
-                          padding: '28px 28px 28px 40px',
-                          boxShadow: 'var(--card-shadow)',
+                          padding: "28px 28px 28px 40px",
+                          boxShadow: "var(--card-shadow)",
                         }}
                       >
                         {/* Left accent bar */}
-                        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', backgroundColor: config.color }} />
+                        <div
+                          style={{
+                            position: "absolute",
+                            left: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: "3px",
+                            backgroundColor: config.color,
+                          }}
+                        />
 
                         <div className="flex flex-col gap-4" style={{ zIndex: 1 }}>
                           {/* Top: quote icon + timestamp */}
                           <div className="flex items-start justify-between">
-                            <span className="pointer-events-none select-none" style={{ color: 'var(--accent-gold)', opacity: 0.4 }}>
-                              <Quote size={32} strokeWidth={1.5} style={{ transform: 'scaleX(-1)' }} />
+                            <span
+                              className="pointer-events-none select-none"
+                              style={{ color: "var(--accent-gold)", opacity: 0.4 }}
+                            >
+                              <Quote
+                                size={32}
+                                strokeWidth={1.5}
+                                style={{ transform: "scaleX(-1)" }}
+                              />
                             </span>
-                            <time className="text-[10px] uppercase tracking-widest font-[family:var(--font-mono)] text-[var(--text-muted)]">
+                            <time className="text-[10px] font-[family:var(--font-mono)] tracking-widest text-[var(--text-muted)] uppercase">
                               {formatTimestamp(claim.timestamp_seconds)}
                             </time>
                           </div>
 
-                          <blockquote className="text-xl md:text-2xl italic leading-tight font-[family:var(--font-display)] text-[var(--text-primary)]">
+                          <blockquote className="text-xl leading-tight font-[family:var(--font-display)] text-[var(--text-primary)] italic md:text-2xl">
                             &#x201C;{claim.claim_text}&#x201D;
                           </blockquote>
 
@@ -222,15 +273,21 @@ export default function SummaryPage() {
                                 href={claim.source_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.15em] hover:underline underline-offset-2 transition-colors font-[family:var(--font-mono)] text-[var(--accent-blue)]"
+                                className="inline-flex items-center gap-1.5 text-[10px] font-[family:var(--font-mono)] tracking-[0.15em] text-[var(--accent-blue)] uppercase underline-offset-2 transition-colors hover:underline"
                               >
                                 <ExternalLink size={14} strokeWidth={2} />
                                 {claim.source_name || "Source"}
                               </a>
-                            ) : <span />}
+                            ) : (
+                              <span />
+                            )}
                             <div
-                              className={`px-3 py-1.5 font-bold uppercase inline-flex items-center font-[family:var(--font-mono)] ${config.className}`}
-                              style={{ borderRadius: 0, fontSize: '0.8rem', letterSpacing: '0.15em' }}
+                              className={`inline-flex items-center px-3 py-1.5 font-[family:var(--font-mono)] font-bold uppercase ${config.className}`}
+                              style={{
+                                borderRadius: 0,
+                                fontSize: "0.8rem",
+                                letterSpacing: "0.15em",
+                              }}
                             >
                               {config.label}
                             </div>
@@ -251,7 +308,7 @@ export default function SummaryPage() {
             onClick={handleCopyLink}
             whileHover={{ x: 6 }}
             whileTap={{ scale: 0.98 }}
-            className="h-14 border border-[var(--border-active)] text-[var(--text-secondary)] uppercase tracking-widest text-xs font-[family:var(--font-mono)] cursor-pointer"
+            className="h-14 cursor-pointer border border-[var(--border-active)] text-xs font-[family:var(--font-mono)] tracking-widest text-[var(--text-secondary)] uppercase"
             style={{ borderRadius: 0 }}
           >
             {copied ? "COPIED" : "COPY LINK"}
@@ -260,7 +317,7 @@ export default function SummaryPage() {
             onClick={() => router.push("/")}
             whileHover={{ x: 6 }}
             whileTap={{ scale: 0.98 }}
-            className="h-14 bg-[var(--accent-red)] text-white uppercase tracking-widest text-xs font-[family:var(--font-mono)] cursor-pointer"
+            className="h-14 cursor-pointer bg-[var(--accent-red)] text-xs font-[family:var(--font-mono)] tracking-widest text-white uppercase"
             style={{ borderRadius: 0 }}
           >
             NEW SESSION

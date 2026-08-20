@@ -1,8 +1,8 @@
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
-from supabase import create_client, Client
+from supabase import Client, create_client
 
 _client: Client | None = None
 
@@ -33,14 +33,7 @@ def create_session(
 
 def _fetch_session_row(session_id: str) -> dict:
     try:
-        session = (
-            get_client()
-            .table("sessions")
-            .select("*")
-            .eq("id", session_id)
-            .single()
-            .execute()
-        )
+        session = get_client().table("sessions").select("*").eq("id", session_id).single().execute()
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -80,9 +73,9 @@ def get_session(session_id: str, *, user_id: str | None = None) -> dict:
 
 
 def end_session(session_id: str) -> None:
-    get_client().table("sessions").update(
-        {"ended_at": datetime.now(timezone.utc).isoformat()}
-    ).eq("id", session_id).execute()
+    get_client().table("sessions").update({"ended_at": datetime.now(UTC).isoformat()}).eq(
+        "id", session_id
+    ).execute()
 
 
 def upsert_claim(claim_data: dict) -> dict:

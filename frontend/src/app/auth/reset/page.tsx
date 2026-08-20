@@ -24,8 +24,7 @@ export default function ResetPasswordPage() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
       if (code) {
-        const { error: exchangeError } =
-          await supabase.auth.exchangeCodeForSession(code);
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError && !cancelled) {
           setError(exchangeError.message);
         }
@@ -69,7 +68,7 @@ export default function ResetPasswordPage() {
 
   return (
     <main
-      className="min-h-screen flex items-center justify-center px-6"
+      className="flex min-h-screen items-center justify-center px-6"
       style={{ backgroundColor: "var(--bg-primary)" }}
     >
       <div
@@ -79,10 +78,10 @@ export default function ResetPasswordPage() {
           border: "1px solid var(--border-subtle)",
         }}
       >
-        <h1 className="font-[family:var(--font-display)] text-2xl text-[var(--text-primary)] mb-2">
+        <h1 className="mb-2 text-2xl font-[family:var(--font-display)] text-[var(--text-primary)]">
           Set new password
         </h1>
-        <p className="font-[family:var(--font-body)] text-sm text-[var(--text-secondary)] mb-6">
+        <p className="mb-6 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
           Choose a new password for your account.
         </p>
 
@@ -91,22 +90,18 @@ export default function ResetPasswordPage() {
         ) : !user ? (
           <p className="text-sm text-[var(--text-secondary)]">
             This reset link is invalid or expired.{" "}
-            <Link href="/" className="underline underline-offset-2 text-[var(--accent-blue)]">
+            <Link href="/" className="text-[var(--accent-blue)] underline underline-offset-2">
               Return home
             </Link>{" "}
             and try again.
-            {error ? (
-              <span className="block mt-2 text-[var(--accent-red)]">{error}</span>
-            ) : null}
+            {error ? <span className="mt-2 block text-[var(--accent-red)]">{error}</span> : null}
           </p>
         ) : done ? (
-          <p className="text-sm text-[var(--accent-green)]">
-            Password updated. Redirecting…
-          </p>
+          <p className="text-sm text-[var(--accent-green)]">Password updated. Redirecting…</p>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <label className="flex flex-col gap-1.5">
-              <span className="font-[family:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
+              <span className="text-[10px] font-[family:var(--font-mono)] tracking-widest text-[var(--text-muted)] uppercase">
                 New password
               </span>
               <input
@@ -116,12 +111,12 @@ export default function ResetPasswordPage() {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-11 px-3 outline-none font-[family:var(--font-body)] text-[var(--text-primary)] bg-[var(--bg-primary)]"
+                className="h-11 bg-[var(--bg-primary)] px-3 font-[family:var(--font-body)] text-[var(--text-primary)] outline-none"
                 style={{ border: "1px solid var(--border-subtle)" }}
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="font-[family:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
+              <span className="text-[10px] font-[family:var(--font-mono)] tracking-widest text-[var(--text-muted)] uppercase">
                 Confirm
               </span>
               <input
@@ -131,17 +126,15 @@ export default function ResetPasswordPage() {
                 minLength={6}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="h-11 px-3 outline-none font-[family:var(--font-body)] text-[var(--text-primary)] bg-[var(--bg-primary)]"
+                className="h-11 bg-[var(--bg-primary)] px-3 font-[family:var(--font-body)] text-[var(--text-primary)] outline-none"
                 style={{ border: "1px solid var(--border-subtle)" }}
               />
             </label>
-            {error && (
-              <p className="text-sm text-[var(--accent-red)]">{error}</p>
-            )}
+            {error && <p className="text-sm text-[var(--accent-red)]">{error}</p>}
             <button
               type="submit"
               disabled={submitting}
-              className="h-12 font-[family:var(--font-display)] font-bold uppercase tracking-[0.15em] text-sm text-white cursor-pointer disabled:opacity-60"
+              className="h-12 cursor-pointer text-sm font-[family:var(--font-display)] font-bold tracking-[0.15em] text-white uppercase disabled:opacity-60"
               style={{ backgroundColor: "var(--accent-red)" }}
             >
               {submitting ? "…" : "Update password"}

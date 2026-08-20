@@ -1,0 +1,55 @@
+# See https://pre-commit.com — polyglot local quality gates.
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-case-conflict
+      - id: detect-private-key
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.2
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^backend/
+        exclude: ^backend/scripts/
+      - id: ruff-format
+        files: ^backend/
+        exclude: ^backend/scripts/
+
+  - repo: local
+    hooks:
+      - id: frontend-prettier
+        name: prettier (frontend)
+        entry: bash -c 'cd frontend && args=(); for f in "$@"; do args+=("${f#frontend/}"); done; npx prettier --write "${args[@]}"' --
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx|mjs|cjs|json|css|md)$
+        exclude: ^(frontend/package-lock\.json|frontend/\.next/)
+      - id: frontend-eslint
+        name: eslint (frontend)
+        entry: bash -c 'cd frontend && args=(); for f in "$@"; do args+=("${f#frontend/}"); done; npx eslint --fix "${args[@]}"' --
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx|mjs)$
+        exclude: ^frontend/\.next/
+      - id: make-check
+        name: make check (pre-push)
+        entry: make check
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

@@ -34,7 +34,7 @@ export default function SessionPage() {
       setClaims((prev) => [...prev, claim]);
       checkClaim(claim);
     },
-    [checkClaim]
+    [checkClaim],
   );
 
   const { isConnected, isPaused, start, stop, pause, resume } = useGeminiLive({
@@ -55,7 +55,9 @@ export default function SessionPage() {
   }, [authLoading, user, accessToken, start, router]);
 
   const checkingIdsRef = useRef(checkingIds);
-  useEffect(() => { checkingIdsRef.current = checkingIds; }, [checkingIds]);
+  useEffect(() => {
+    checkingIdsRef.current = checkingIds;
+  }, [checkingIds]);
 
   const handleStop = async () => {
     stop();
@@ -78,13 +80,21 @@ export default function SessionPage() {
   };
 
   // Verdict counts for top bar
-  const verdictCounts: Record<Verdict, number> = { TRUE: 0, FALSE: 0, MISLEADING: 0, UNVERIFIED: 0 };
+  const verdictCounts: Record<Verdict, number> = {
+    TRUE: 0,
+    FALSE: 0,
+    MISLEADING: 0,
+    UNVERIFIED: 0,
+  };
   for (const v of verdicts) verdictCounts[v.verdict]++;
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-dvh flex items-center justify-center" style={{ backgroundColor: "var(--bg-primary)" }}>
-        <p className="text-[var(--text-secondary)] font-[family:var(--font-display)] italic">
+      <div
+        className="flex min-h-dvh items-center justify-center"
+        style={{ backgroundColor: "var(--bg-primary)" }}
+      >
+        <p className="font-[family:var(--font-display)] text-[var(--text-secondary)] italic">
           {authLoading ? "Loading…" : "Redirecting…"}
         </p>
       </div>
@@ -104,13 +114,9 @@ export default function SessionPage() {
           onStop={handleStop}
         />
       </div>
-      <div className="w-full mx-auto px-6 md:px-12 py-8 max-w-[900px]">
+      <div className="mx-auto w-full max-w-[900px] px-6 py-8 md:px-12">
         <div>
-          <VerdictFeed
-            claims={claims}
-            verdicts={verdicts}
-            checkingIds={checkingIds}
-          />
+          <VerdictFeed claims={claims} verdicts={verdicts} checkingIds={checkingIds} />
         </div>
       </div>
     </div>

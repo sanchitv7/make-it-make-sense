@@ -140,7 +140,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] cursor-pointer"
+              className="absolute top-4 right-4 cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               aria-label="Close dialog"
             >
               <X size={18} strokeWidth={2} />
@@ -148,11 +148,11 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
 
             <h2
               id={titleId}
-              className="font-[family:var(--font-display)] text-2xl text-[var(--text-primary)] mb-1 pr-8"
+              className="mb-1 pr-8 text-2xl font-[family:var(--font-display)] text-[var(--text-primary)]"
             >
               {modeTitle(mode)}
             </h2>
-            <p className="font-[family:var(--font-body)] text-sm text-[var(--text-secondary)] mb-6">
+            <p className="mb-6 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
               {mode === "forgot"
                 ? "We’ll email you a link to set a new password."
                 : "Email and password to start listening."}
@@ -160,7 +160,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <label className="flex flex-col gap-1.5">
-                <span className="font-[family:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
+                <span className="text-[10px] font-[family:var(--font-mono)] tracking-widest text-[var(--text-muted)] uppercase">
                   Email
                 </span>
                 <input
@@ -169,38 +169,36 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-11 px-3 outline-none font-[family:var(--font-body)] text-[var(--text-primary)] bg-[var(--bg-primary)]"
+                  className="h-11 bg-[var(--bg-primary)] px-3 font-[family:var(--font-body)] text-[var(--text-primary)] outline-none"
                   style={{ border: "1px solid var(--border-subtle)" }}
                 />
               </label>
 
               {mode !== "forgot" && (
                 <label className="flex flex-col gap-1.5">
-                  <span className="font-[family:var(--font-mono)] text-[10px] uppercase tracking-widest text-[var(--text-muted)]">
+                  <span className="text-[10px] font-[family:var(--font-mono)] tracking-widest text-[var(--text-muted)] uppercase">
                     Password
                   </span>
                   <input
                     type="password"
-                    autoComplete={
-                      mode === "signup" ? "new-password" : "current-password"
-                    }
+                    autoComplete={mode === "signup" ? "new-password" : "current-password"}
                     required
                     minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 px-3 outline-none font-[family:var(--font-body)] text-[var(--text-primary)] bg-[var(--bg-primary)]"
+                    className="h-11 bg-[var(--bg-primary)] px-3 font-[family:var(--font-body)] text-[var(--text-primary)] outline-none"
                     style={{ border: "1px solid var(--border-subtle)" }}
                   />
                 </label>
               )}
 
               {error && (
-                <p className="text-sm text-[var(--accent-red)] font-[family:var(--font-body)]">
+                <p className="text-sm font-[family:var(--font-body)] text-[var(--accent-red)]">
                   {error}
                 </p>
               )}
               {info && (
-                <p className="text-sm text-[var(--accent-green)] font-[family:var(--font-body)]">
+                <p className="text-sm font-[family:var(--font-body)] text-[var(--accent-green)]">
                   {info}
                 </p>
               )}
@@ -208,26 +206,26 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
               <button
                 type="submit"
                 disabled={submitting}
-                className="h-12 mt-1 font-[family:var(--font-display)] font-bold uppercase tracking-[0.15em] text-sm text-white cursor-pointer disabled:opacity-60"
+                className="mt-1 h-12 cursor-pointer text-sm font-[family:var(--font-display)] font-bold tracking-[0.15em] text-white uppercase disabled:opacity-60"
                 style={{ backgroundColor: "var(--accent-red)" }}
               >
                 {submitting ? "…" : submitLabel(mode)}
               </button>
             </form>
 
-            <div className="mt-5 flex flex-col gap-2 font-[family:var(--font-body)] text-sm text-[var(--text-secondary)]">
+            <div className="mt-5 flex flex-col gap-2 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
               {mode === "signin" && (
                 <>
                   <button
                     type="button"
-                    className="text-left underline underline-offset-2 cursor-pointer hover:text-[var(--text-primary)]"
+                    className="cursor-pointer text-left underline underline-offset-2 hover:text-[var(--text-primary)]"
                     onClick={() => switchMode("forgot")}
                   >
                     Forgot password?
                   </button>
                   <button
                     type="button"
-                    className="text-left cursor-pointer hover:text-[var(--text-primary)]"
+                    className="cursor-pointer text-left hover:text-[var(--text-primary)]"
                     onClick={() => switchMode("signup")}
                   >
                     Need an account?{" "}
@@ -238,7 +236,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
               {mode === "signup" && (
                 <button
                   type="button"
-                  className="text-left cursor-pointer hover:text-[var(--text-primary)]"
+                  className="cursor-pointer text-left hover:text-[var(--text-primary)]"
                   onClick={() => switchMode("signin")}
                 >
                   Already have an account?{" "}
@@ -248,7 +246,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
               {mode === "forgot" && (
                 <button
                   type="button"
-                  className="text-left underline underline-offset-2 cursor-pointer hover:text-[var(--text-primary)]"
+                  className="cursor-pointer text-left underline underline-offset-2 hover:text-[var(--text-primary)]"
                   onClick={() => switchMode("signin")}
                 >
                   Back to sign in

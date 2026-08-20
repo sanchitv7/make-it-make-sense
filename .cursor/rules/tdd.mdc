@@ -1,0 +1,13 @@
+---
+description: Pragmatic Matt Pocock TDD for features and bug fixes
+alwaysApply: true
+---
+
+# TDD (pragmatic)
+
+- New pure/domain logic and bug fixes: one failing test → minimal code → refactor (vertical slices).
+- Test behavior through public interfaces, not internals.
+- Skip test-first for UI wiring, config, and copy-only changes.
+- Do not write large batches of tests before any implementation.
+- Prefer extending `backend/tests/` and frontend `*.test.ts` under Vitest.
+- Manual Live/Gemini flows stay in `backend/scripts/` — not a substitute for unit tests.

@@ -20,6 +20,11 @@ def verify_access_token(token: str) -> str:
             detail="Invalid or expired token",
         ) from exc
 
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
     user = result.user
     if user is None or not user.id:
         raise HTTPException(

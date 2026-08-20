@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { shouldCheckClaim } from "@/lib/claim-dedupe";
 import type { DetectedClaim, FactCheckResult, ContextPreset } from "@/types";
 import { apiFetch } from "@/lib/api";
 
@@ -29,13 +30,11 @@ export function useFactCheck({
 
   const checkClaim = useCallback(
     (claim: DetectedClaim) => {
-      // Deduplicate
-      if (checkedRef.current.has(claim.claim_text)) return;
+      if (!shouldCheckClaim(checkedRef.current, claim.claim_text)) return;
       if (!accessToken) {
         console.error("Fact-check skipped: not signed in");
         return;
       }
-      checkedRef.current.add(claim.claim_text);
 
       setCheckingIds((prev) => new Set(prev).add(claim.id));
 
@@ -83,7 +82,7 @@ export function useFactCheck({
           });
         });
     },
-    [sessionId, preset, speakerInfo, accessToken]
+    [sessionId, preset, speakerInfo, accessToken],
   );
 
   return { verdicts, checkingIds, checkClaim };

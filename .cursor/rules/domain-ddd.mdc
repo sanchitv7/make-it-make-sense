@@ -1,0 +1,12 @@
+---
+description: Domain language and ADRs (DDD) for this codebase
+alwaysApply: true
+---
+
+# Domain (DDD)
+
+- Use vocabulary from root `CONTEXT.md` (claim, verdict, session, preset, trusted source, etc.).
+- Do not invent alternate names for the same concepts.
+- Before architectural changes, check `docs/adr/`; add an ADR when a lasting decision is made.
+- See `docs/agents/domain.md` for how skills consume domain docs.
+- Align code and tests with domain terms (e.g. verdict types, claim text dedupe).

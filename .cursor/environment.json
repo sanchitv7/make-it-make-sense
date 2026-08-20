@@ -1,6 +1,6 @@
 {
   "name": "Make It Make Sense",
-  "install": "python3 -m pip install --user --upgrade uv && export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && { [ -d .venv ] || uv venv; } && uv pip install -r requirements.txt && cd ../frontend && npm ci",
+  "install": "python3 -m pip install --user --upgrade uv && export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && { [ -d .venv ] || uv venv; } && uv pip install -r requirements.txt -r requirements-dev.txt && cd ../frontend && npm ci && cd .. && (command -v pre-commit >/dev/null || uv tool install pre-commit) && pre-commit install --hook-type pre-commit --hook-type pre-push",
   "terminals": [
     {
       "name": "backend",
