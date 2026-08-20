@@ -28,7 +28,7 @@ Browser ──mic──→ FastAPI /ws/live (JWT) ──→ Gemini Live API
   │──POST /api/fact-check (JWT)──→ Gemini 2.5 Flash + Google Search
 ```
 
-Guests see the splash and how-it-works only. An Account is required to Begin and listen. Past Sessions UI is a follow-up (ownership is stored now).
+Guests see the splash and how-it-works only. An Account is required to Begin and listen. Signed-in Accounts can open Past Sessions (`/sessions`) to reopen ended Sessions that have Claims.
 
 ## File Structure
 
@@ -39,6 +39,7 @@ Guests see the splash and how-it-works only. An Account is required to Begin and
 - `models.py` — Pydantic request/response models
 - `prompts.py` — System prompts per context preset + fact-check template
 - `fact_check.py` — Fact-check pipeline
+- `session_blurb.py` — One-shot Session title/blurb generation
 - `source_filter.py` — Trusted domain whitelist
 - `supabase_client.py` — Service-role CRUD for sessions and claims
 - `requirements.txt` / `.env`
@@ -48,7 +49,8 @@ Guests see the splash and how-it-works only. An Account is required to Begin and
 - `src/app/page.tsx` — Home (splash + gated setup)
 - `src/app/auth/reset/page.tsx` — Password recovery
 - `src/app/session/[id]/page.tsx` — Live listening
-- `src/app/summary/[id]/page.tsx` — Session summary
+- `src/app/summary/[id]/page.tsx` — Session verdict report
+- `src/app/sessions/page.tsx` — Past Sessions card board
 - `src/components/auth-provider.tsx` / `auth-modal.tsx` / `site-header.tsx` / `account-chip.tsx`
 - `src/lib/account-display-name.ts` — First-name label from Account `full_name`
 - `src/lib/supabase/` — Browser/server/middleware clients
@@ -61,7 +63,8 @@ Guests see the splash and how-it-works only. An Account is required to Begin and
 2. Account picks a context preset → `POST /api/session` (JWT) creates a Session with `user_id`
 3. Session page opens → `/ws/live` auth message then proxies mic audio to Gemini Live
 4. Each detected claim → `POST /api/fact-check` (JWT + ownership check)
-5. On stop → `PATCH /api/session/{id}` → summary page
+5. On stop → `PATCH /api/session/{id}` ends the Session and kicks off a one-shot title/blurb generation → verdict page
+6. Past Sessions board → `GET /api/sessions` lists ended Sessions with Claims for the Account
 
 ## API Routes
 
@@ -70,8 +73,9 @@ Guests see the splash and how-it-works only. An Account is required to Begin and
 | GET | `/health` | public | Health check |
 | POST | `/api/fact-check` | JWT + ownership | Fact-check a claim |
 | POST | `/api/session` | JWT | Create Session for Account |
+| GET | `/api/sessions` | JWT | List ended Sessions with Claims for Account |
 | GET | `/api/session/{id}` | JWT + ownership | Get Session + claims |
-| PATCH | `/api/session/{id}` | JWT + ownership | End Session |
+| PATCH | `/api/session/{id}` | JWT + ownership | End Session (async title/blurb) |
 | WS | `/ws/live` | JWT first message | Live audio proxy |
 
 ## Env Vars
@@ -95,6 +99,8 @@ CREATE TABLE sessions (
   user_id UUID REFERENCES auth.users(id),
   context_preset TEXT NOT NULL,
   context_detail TEXT,
+  title TEXT,
+  blurb TEXT,
   started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   ended_at TIMESTAMPTZ
 );
@@ -120,8 +126,8 @@ ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
 -- no policies: anon/authenticated denied; service role bypasses
 ```
 
-Existing projects: run [`docs/supabase-auth-migration.sql`](docs/supabase-auth-migration.sql).
+Existing projects: run [`docs/supabase-auth-migration.sql`](docs/supabase-auth-migration.sql), then [`docs/supabase-sessions-board-migration.sql`](docs/supabase-sessions-board-migration.sql) (wipes existing Sessions/Claims and adds `title`/`blurb`).
 
 ## Follow-ups
 
-- Past Sessions list (query Sessions by Account `user_id`)
+- Session retention / TTL (rows are stored indefinitely today)

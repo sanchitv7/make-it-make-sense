@@ -53,6 +53,31 @@ class SessionDetail(BaseModel):
     id: str
     context_preset: str
     context_detail: str | None = None
+    title: str | None = None
+    blurb: str | None = None
     started_at: datetime
     ended_at: datetime | None = None
     claims: list[ClaimDetail] = []
+
+
+class VerdictCounts(BaseModel):
+    TRUE: int = 0
+    FALSE: int = 0
+    MISLEADING: int = 0
+    UNVERIFIED: int = 0
+
+
+class SessionCard(BaseModel):
+    id: str
+    title: str | None = None
+    blurb: str | None = None
+    context_preset: str
+    context_detail: str | None = None
+    started_at: datetime
+    ended_at: datetime | None = None
+    claim_count: int
+    verdict_counts: VerdictCounts
+
+
+class SessionListResponse(BaseModel):
+    sessions: list[SessionCard]

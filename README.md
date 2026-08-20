@@ -43,7 +43,7 @@ Browser ──mic──→ FastAPI /ws/live (JWT) ──→ Gemini Live API
 
 ### 1. Apply the Supabase schema
 
-Run this SQL in your Supabase dashboard → SQL Editor (or the migration in `docs/supabase-auth-migration.sql` if tables already exist):
+Run this SQL in your Supabase dashboard → SQL Editor (or apply `docs/supabase-auth-migration.sql` then `docs/supabase-sessions-board-migration.sql` if tables already exist — the latter wipes existing sessions/claims and adds `title`/`blurb`):
 
 ```sql
 CREATE TYPE verdict_type AS ENUM ('TRUE', 'FALSE', 'MISLEADING', 'UNVERIFIED');
@@ -53,6 +53,8 @@ CREATE TABLE sessions (
   user_id UUID REFERENCES auth.users(id),
   context_preset TEXT NOT NULL,
   context_detail TEXT,
+  title TEXT,
+  blurb TEXT,
   started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   ended_at TIMESTAMPTZ
 );
@@ -147,8 +149,9 @@ Open [http://localhost:3000](http://localhost:3000). Guests see the splash; **Be
 | `GET` | `/health` | public | Health check |
 | `POST` | `/api/fact-check` | JWT + ownership | Fact-check a claim |
 | `POST` | `/api/session` | JWT | Create a new session |
+| `GET` | `/api/sessions` | JWT | List ended sessions with claims |
 | `GET` | `/api/session/{id}` | JWT + ownership | Get session + all claims |
-| `PATCH` | `/api/session/{id}` | JWT + ownership | End session |
+| `PATCH` | `/api/session/{id}` | JWT + ownership | End session (async title/blurb) |
 | `WS` | `/ws/live` | JWT first message (`type: auth`) | Live audio proxy |
 
 ## Key modules
@@ -160,6 +163,8 @@ Open [http://localhost:3000](http://localhost:3000). Guests see the splash; **Be
 | `main.py` | FastAPI app, CORS, JWT-gated routes, WebSocket proxy |
 | `auth.py` | Verify Supabase access tokens |
 | `fact_check.py` | Fact-check pipeline |
+| `session_blurb.py` | One-shot session title/blurb |
+| `session_cards.py` | Past Sessions card assembly |
 | `source_filter.py` | Trusted domain whitelist |
 | `prompts.py` | System instructions per context preset |
 | `supabase_client.py` | Supabase CRUD + ownership checks |
@@ -173,10 +178,11 @@ Open [http://localhost:3000](http://localhost:3000). Guests see the splash; **Be
 | `hooks/use-gemini-live.ts` | WebSocket + mic (passes JWT) |
 | `hooks/use-fact-check.ts` | Authenticated fact-check calls |
 | `app/auth/reset/page.tsx` | Password recovery |
+| `app/sessions/page.tsx` | Past Sessions card board |
 
 ## Notes
 
 - The Live WebSocket auto-reconnects at 13.5 minutes to stay within Gemini's 15-minute session limit
 - `SUPABASE_SERVICE_ROLE_KEY` must be the new **Secret key** (`sb_secret_...`), not the legacy service_role JWT
 - Audio is captured at 16kHz PCM mono via the Web Audio API's AudioWorklet
-- Past sessions list is a follow-up; Sessions already store `user_id`
+- Ending a session kicks off a cheap Gemini title/blurb for the verdict page and Sessions board

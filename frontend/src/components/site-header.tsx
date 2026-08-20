@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { AccountChip } from "@/components/account-chip";
 import { useAuth } from "@/components/auth-provider";
 import { accountFullNameFromMetadata } from "@/lib/account-display-name";
 
 interface SiteHeaderProps {
-  onSignInClick: () => void;
+  onSignInClick?: () => void;
 }
 
 const authControlClassName =
@@ -22,15 +23,18 @@ export function SiteHeader({ onSignInClick }: SiteHeaderProps) {
         ) : user ? (
           <>
             <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
+            <Link href="/sessions" className={authControlClassName}>
+              Sessions
+            </Link>
             <button type="button" onClick={() => void signOut()} className={authControlClassName}>
               Sign out
             </button>
           </>
-        ) : (
+        ) : onSignInClick ? (
           <button type="button" onClick={onSignInClick} className={authControlClassName}>
             Sign in
           </button>
-        )}
+        ) : null}
       </div>
     </header>
   );

@@ -5,7 +5,7 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.websockets import WebSocketDisconnect
 from google import genai
@@ -20,8 +20,10 @@ from models import (
     FactCheckRequest,
     FactCheckResponse,
     SessionDetail,
+    SessionListResponse,
 )
 from prompts import PROMPTS
+from session_blurb import generate_session_title_blurb
 
 load_dotenv()
 
@@ -256,6 +258,17 @@ async def create_session(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/sessions", response_model=SessionListResponse)
+async def list_sessions(
+    user_id: str = Depends(require_user),
+):
+    try:
+        sessions = supabase_client.list_sessions_for_user(user_id, limit=100)
+        return SessionListResponse(sessions=sessions)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/session/{session_id}", response_model=SessionDetail)
 async def get_session(
     session_id: str,
@@ -269,14 +282,34 @@ async def get_session(
         raise HTTPException(status_code=404, detail=str(e))
 
 
+async def _generate_and_persist_session_blurb(session_id: str) -> None:
+    try:
+        detail = supabase_client.get_session(session_id)
+        claims = detail.get("claims") or []
+        if not claims:
+            return
+        result = await generate_session_title_blurb(
+            context_preset=detail["context_preset"],
+            context_detail=detail.get("context_detail"),
+            claims=claims,
+        )
+        if result is None:
+            return
+        supabase_client.update_session_blurb(session_id, result.title, result.blurb)
+    except Exception:
+        logger.exception("Failed to generate session title/blurb for %s", session_id)
+
+
 @app.patch("/api/session/{session_id}")
 async def end_session(
     session_id: str,
+    background_tasks: BackgroundTasks,
     user_id: str = Depends(require_user),
 ):
     try:
         supabase_client.assert_session_owner(session_id, user_id)
         supabase_client.end_session(session_id)
+        background_tasks.add_task(_generate_and_persist_session_blurb, session_id)
         return {"status": "ended"}
     except HTTPException:
         raise

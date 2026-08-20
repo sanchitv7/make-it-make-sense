@@ -29,6 +29,8 @@ export interface SessionRow {
   id: string;
   context_preset: string;
   context_detail: string | null;
+  title: string | null;
+  blurb: string | null;
   started_at: string;
   ended_at: string | null;
 }
@@ -49,7 +51,32 @@ export interface SessionDetailResponse {
   id: string;
   context_preset: string;
   context_detail: string | null;
+  title: string | null;
+  blurb: string | null;
   started_at: string;
   ended_at: string | null;
   claims: ClaimRow[];
+}
+
+export interface VerdictCounts {
+  TRUE: number;
+  FALSE: number;
+  MISLEADING: number;
+  UNVERIFIED: number;
+}
+
+export interface SessionCard {
+  id: string;
+  title: string | null;
+  blurb: string | null;
+  context_preset: string;
+  context_detail: string | null;
+  started_at: string;
+  ended_at: string | null;
+  claim_count: number;
+  verdict_counts: VerdictCounts;
+}
+
+export interface SessionListResponse {
+  sessions: SessionCard[];
 }
