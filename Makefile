@@ -36,7 +36,7 @@ test:
 	cd $(FRONTEND) && npm run test
 
 build:
-	cd $(FRONTEND) && npm run build
+	cd $(FRONTEND) && NEXT_PUBLIC_BACKEND_URL=$${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000} NEXT_PUBLIC_SUPABASE_URL=$${NEXT_PUBLIC_SUPABASE_URL:-https://example.supabase.co} NEXT_PUBLIC_SUPABASE_ANON_KEY=$${NEXT_PUBLIC_SUPABASE_ANON_KEY:-public-anon-key} npm run build
 
 smoke-backend:
 	cd $(BACKEND) && $(BACKEND_PYTHON) -c "import main; import fact_check; import source_filter; import models; import prompts; import supabase_client"

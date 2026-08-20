@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Landmark, Newspaper, MessageSquare, Mic2, ArrowRight } from "lucide-react";
 import type { ContextPreset, ContextPresetOption } from "@/types";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+import { useAuth } from "@/components/auth-provider";
+import { apiFetch } from "@/lib/api";
 
 const PRESETS: (ContextPresetOption & { icon: React.ReactNode })[] = [
   {
@@ -58,17 +58,17 @@ const itemVariants = {
 
 export function ContextSetup() {
   const router = useRouter();
+  const { accessToken } = useAuth();
   const [selected, setSelected] = useState<ContextPreset | null>(null);
   const [contextDetail, setContextDetail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleStart = async () => {
-    if (!selected) return;
+    if (!selected || !accessToken) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/session`, {
+      const res = await apiFetch("/api/session", accessToken, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           context_preset: selected,
           context_detail: contextDetail || null,

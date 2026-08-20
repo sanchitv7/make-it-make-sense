@@ -5,13 +5,14 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, WebSocket
+from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.websockets import WebSocketDisconnect
 from google import genai
 from google.genai import types
 
 import supabase_client
+from auth import require_user, verify_access_token
 from fact_check import fact_check_claim, init_pool
 from models import (
     CreateSessionRequest,
@@ -79,8 +80,30 @@ def _to_browser_msg(response) -> dict | None:
 
 
 @app.websocket("/ws/live")
-async def live_ws(websocket: WebSocket, preset: str = Query(default="podcast")):
+async def live_ws(
+    websocket: WebSocket,
+    preset: str = Query(default="podcast"),
+):
+    # Accept first; auth is the first client message (not a query param).
     await websocket.accept()
+    try:
+        raw = await asyncio.wait_for(websocket.receive_text(), timeout=10)
+        auth_msg = json.loads(raw)
+    except (TimeoutError, json.JSONDecodeError, WebSocketDisconnect):
+        await websocket.close(code=4401, reason="Unauthorized")
+        return
+
+    if auth_msg.get("type") != "auth" or not auth_msg.get("access_token"):
+        await websocket.close(code=4401, reason="Unauthorized")
+        return
+    try:
+        verify_access_token(auth_msg["access_token"])
+    except HTTPException:
+        await websocket.close(code=4401, reason="Unauthorized")
+        return
+
+    await websocket.send_text(json.dumps({"type": "auth_ok"}))
+
     system_instruction = PROMPTS.get(preset, PROMPTS["podcast"])
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -180,8 +203,12 @@ async def live_ws(websocket: WebSocket, preset: str = Query(default="podcast")):
 
 
 @app.post("/api/fact-check", response_model=FactCheckResponse)
-async def check_fact(request: FactCheckRequest):
+async def check_fact(
+    request: FactCheckRequest,
+    user_id: str = Depends(require_user),
+):
     try:
+        supabase_client.assert_session_owner(request.session_id, user_id)
         result = await fact_check_claim(
             claim_text=request.claim_text,
             preset=request.preset,
@@ -206,16 +233,22 @@ async def check_fact(request: FactCheckRequest):
             logger.error("Failed to persist claim to Supabase: %s", db_err)
 
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Fact-check endpoint error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/session", response_model=CreateSessionResponse)
-async def create_session(request: CreateSessionRequest):
+async def create_session(
+    request: CreateSessionRequest,
+    user_id: str = Depends(require_user),
+):
     try:
         session_id = supabase_client.create_session(
             preset=request.context_preset,
+            user_id=user_id,
             context_detail=request.context_detail,
         )
         return CreateSessionResponse(session_id=session_id)
@@ -224,17 +257,28 @@ async def create_session(request: CreateSessionRequest):
 
 
 @app.get("/api/session/{session_id}", response_model=SessionDetail)
-async def get_session(session_id: str):
+async def get_session(
+    session_id: str,
+    user_id: str = Depends(require_user),
+):
     try:
-        return supabase_client.get_session(session_id)
+        return supabase_client.get_session(session_id, user_id=user_id)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
 
 
 @app.patch("/api/session/{session_id}")
-async def end_session(session_id: str):
+async def end_session(
+    session_id: str,
+    user_id: str = Depends(require_user),
+):
     try:
+        supabase_client.assert_session_owner(session_id, user_id)
         supabase_client.end_session(session_id)
         return {"status": "ended"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

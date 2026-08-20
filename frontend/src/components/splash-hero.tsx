@@ -366,7 +366,7 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
             className="inline-flex cursor-pointer items-center gap-3 bg-[var(--accent-red)] px-10 py-5 text-sm font-[family:var(--font-display)] font-bold tracking-[0.2em] text-white uppercase"
             style={{ borderRadius: 0 }}
           >
-            Begin Session
+            Begin
             <ArrowRight size={20} strokeWidth={2} />
           </motion.button>
         </motion.div>

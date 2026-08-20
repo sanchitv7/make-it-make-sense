@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ExternalLink, Quote } from "lucide-react";
 import Link from "next/link";
 import type { SessionDetailResponse, Verdict } from "@/types";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+import { useAuth } from "@/components/auth-provider";
+import { apiFetch } from "@/lib/api";
 
 const VERDICT_CONFIG: Record<Verdict, { color: string; className: string; label: string }> = {
   TRUE: { color: "var(--accent-green)", className: "verdict-true", label: "TRUE" },
@@ -37,13 +37,20 @@ export default function SummaryPage() {
   const params = useParams();
   const router = useRouter();
   const sessionId = params.id as string;
+  const { accessToken, loading: authLoading, user } = useAuth();
 
   const [session, setSession] = useState<SessionDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetch(`${BACKEND_URL}/api/session/${sessionId}`)
+    if (authLoading) return;
+    if (!user || !accessToken) {
+      setLoading(false);
+      setSession(null);
+      return;
+    }
+    apiFetch(`/api/session/${sessionId}`, accessToken)
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();
@@ -51,7 +58,7 @@ export default function SummaryPage() {
       .then(setSession)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [sessionId]);
+  }, [sessionId, accessToken, authLoading, user]);
 
   const verdictCounts = useMemo(() => {
     const counts: Record<Verdict, number> = { TRUE: 0, FALSE: 0, MISLEADING: 0, UNVERIFIED: 0 };
@@ -59,7 +66,7 @@ export default function SummaryPage() {
     return counts;
   }, [session]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg-primary)]">
         <motion.p
@@ -74,11 +81,11 @@ export default function SummaryPage() {
     );
   }
 
-  if (!session) {
+  if (!user || !session) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--bg-primary)]">
         <p className="text-xl font-[family:var(--font-display)] text-[var(--text-secondary)]">
-          Session not found.
+          {!user ? "Sign in to view this session." : "Session not found."}
         </p>
         <Link
           href="/"

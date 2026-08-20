@@ -34,7 +34,7 @@ run "frontend format" bash -c "cd frontend && npm run format:check"
 run "frontend lint" bash -c "cd frontend && npm run lint"
 run "frontend typecheck" bash -c "cd frontend && npm run typecheck"
 run "frontend test" bash -c "cd frontend && npm run test"
-run "frontend build" bash -c "cd frontend && npm run build"
+run "frontend build" bash -c "cd frontend && NEXT_PUBLIC_BACKEND_URL=\"${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000}\" NEXT_PUBLIC_SUPABASE_URL=\"${NEXT_PUBLIC_SUPABASE_URL:-https://example.supabase.co}\" NEXT_PUBLIC_SUPABASE_ANON_KEY=\"${NEXT_PUBLIC_SUPABASE_ANON_KEY:-public-anon-key}\" npm run build"
 
 echo ""
 echo "==> all checks passed"

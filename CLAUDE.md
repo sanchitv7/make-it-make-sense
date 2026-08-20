@@ -24,8 +24,12 @@ Dependencies: `make install` or `cd backend && uv pip install -r requirements.tx
 
 Environment: copy `backend/.env.example` → `backend/.env` and fill in:
 - `GEMINI_API_KEY` — Gemini API key
-- `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` — from Supabase dashboard
+- `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` — from Supabase dashboard (service role also verifies access tokens via Auth API)
 - `ALLOWED_ORIGINS` — set to `http://localhost:3000` for local dev
+
+Frontend env (`frontend/.env.local`): `NEXT_PUBLIC_BACKEND_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Auth: email/password via Supabase Auth. Guests see splash only; Begin/Sign in opens auth modal. Session HTTP, fact-check, and `/ws/live` require JWT. Sessions store `user_id`. Schema migration: `docs/supabase-auth-migration.sql`. ADR: `docs/adr/0001-supabase-auth.md`.
 
 Unit tests (in `make check`):
 ```bash
