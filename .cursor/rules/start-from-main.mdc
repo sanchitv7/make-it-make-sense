@@ -1,0 +1,16 @@
+---
+description: Start new tasks from latest origin/main before branching or worktrees
+alwaysApply: true
+---
+
+# Start from latest main
+
+When starting a **new** task (new worktree or new feature branch):
+
+1. `git fetch origin main`
+2. Update local main: `git checkout main && git pull --ff-only origin main` (or `make sync-main`)
+3. Then create the branch or worktree from that tip (`git switch -c …` / `git worktree add -b …`)
+
+Do not branch off a stale `main` or an old feature branch for a new task.
+
+Cursor hook `require-fresh-main-before-branch` blocks `git switch -c`, `git checkout -b`, and `git worktree add` unless `HEAD` already contains `origin/main`. Fix by syncing main first, then branching.
