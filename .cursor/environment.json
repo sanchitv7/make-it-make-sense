@@ -1,0 +1,15 @@
+{
+  "name": "Make It Make Sense",
+  "install": "python3 -m pip install --user --upgrade uv && export PATH=\"$HOME/.local/bin:$PATH\" && cd backend && { [ -d .venv ] || uv venv; } && uv pip install -r requirements.txt && cd ../frontend && npm ci",
+  "terminals": [
+    {
+      "name": "backend",
+      "command": "cd backend && source .venv/bin/activate && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    },
+    {
+      "name": "frontend",
+      "command": "cd frontend && npm run dev"
+    }
+  ],
+  "ports": [3000, 8000]
+}
