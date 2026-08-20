@@ -1,6 +1,8 @@
 "use client";
 
+import { AccountChip } from "@/components/account-chip";
 import { useAuth } from "@/components/auth-provider";
+import { accountFullNameFromMetadata } from "@/lib/account-display-name";
 
 interface SiteHeaderProps {
   onSignInClick: () => void;
@@ -19,12 +21,7 @@ export function SiteHeader({ onSignInClick }: SiteHeaderProps) {
           <div className="min-h-10 min-w-[5.5rem]" aria-hidden="true" />
         ) : user ? (
           <>
-            <span
-              className="hidden max-w-[200px] truncate text-sm font-[family:var(--font-body)] text-[var(--text-secondary)] sm:inline"
-              title={user.email ?? undefined}
-            >
-              {user.email}
-            </span>
+            <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
             <button type="button" onClick={() => void signOut()} className={authControlClassName}>
               Sign out
             </button>
