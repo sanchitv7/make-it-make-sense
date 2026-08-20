@@ -3,9 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { DetectedClaim, ContextPreset } from "@/types";
+import { backendUrl } from "@/lib/api";
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 const RECONNECT_BEFORE_MS = 13.5 * 60 * 1000;
 
 export type TranscriptSegment =
@@ -15,11 +14,13 @@ export type TranscriptSegment =
 interface UseGeminiLiveOptions {
   preset: ContextPreset;
   onClaim: (claim: DetectedClaim) => void;
+  accessToken: string | null;
 }
 
 export function useGeminiLive({
   preset,
   onClaim,
+  accessToken,
 }: UseGeminiLiveOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
@@ -32,11 +33,13 @@ export function useGeminiLive({
   const stoppedRef = useRef(true);
   const presetRef = useRef(preset);
   const onClaimRef = useRef(onClaim);
+  const accessTokenRef = useRef(accessToken);
   // ID of the current "open" text segment being streamed into
   const currentTextSegIdRef = useRef<string | null>(null);
 
   useEffect(() => { presetRef.current = preset; }, [preset]);
   useEffect(() => { onClaimRef.current = onClaim; }, [onClaim]);
+  useEffect(() => { accessTokenRef.current = accessToken; }, [accessToken]);
 
   function teardownAudio() {
     workletRef.current?.disconnect();
@@ -149,14 +152,29 @@ export function useGeminiLive({
 
       if (stoppedRef.current) return;
 
-      const wsBase = BACKEND_URL.replace(/^http/, "ws");
-      const wsUrl = `${wsBase}/ws/live?preset=${presetRef.current}`;
+      const token = accessTokenRef.current;
+      if (!token) {
+        console.error("[Live] Missing access token — cannot connect");
+        return;
+      }
+
+      const params = new URLSearchParams({
+        preset: presetRef.current,
+      });
+      const wsUrl = backendUrl(`/ws/live?${params.toString()}`).replace(
+        /^http/,
+        "ws",
+      );
       console.log("[Live] Connecting to proxy:", wsUrl);
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
+      let authAccepted = false;
 
-      ws.onopen = () => console.log("[Live] WS open");
+      ws.onopen = () => {
+        console.log("[Live] WS open — sending auth");
+        ws.send(JSON.stringify({ type: "auth", access_token: token }));
+      };
 
       ws.onmessage = async (event) => {
         let msg: Record<string, unknown>;
@@ -165,7 +183,18 @@ export function useGeminiLive({
         const keys = Object.keys(msg);
         if (keys.length) console.log("[Live] ←", keys[0], JSON.stringify(msg).slice(0, 120));
 
+        if (msg.type === "auth_ok") {
+          console.log("[Live] Auth accepted");
+          authAccepted = true;
+          return;
+        }
+
         if ("setupComplete" in msg) {
+          if (!authAccepted) {
+            console.error("[Live] setupComplete before auth_ok — closing");
+            ws.close();
+            return;
+          }
           console.log("[Live] Setup complete — starting audio");
           setIsConnected(true);
           await startAudio(ws);
