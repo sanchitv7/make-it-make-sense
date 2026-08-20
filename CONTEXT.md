@@ -48,6 +48,7 @@ Guests see the splash and how-it-works only. An Account is required to Begin and
 
 - `src/app/page.tsx` — Home (splash + gated setup)
 - `src/app/auth/reset/page.tsx` — Password recovery
+- `src/app/session/[id]/page.tsx` — Live listening
 - `src/app/summary/[id]/page.tsx` — Session verdict report
 - `src/app/sessions/page.tsx` — Past Sessions card board
 - `src/components/auth-provider.tsx` / `auth-modal.tsx` / `site-header.tsx` / `account-chip.tsx`
