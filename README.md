@@ -4,42 +4,33 @@ Real-time AI fact-checker that listens to live audio, detects factual claims, an
 
 ## What it does
 
-1. You pick a context preset (political speech, news broadcast, earnings call, podcast)
-2. The app listens via your microphone
-3. Gemini Live API transcribes the audio and flags factual claims in real time
-4. Each claim is immediately fact-checked using Gemini 2.5 Flash + Google Search
-5. Verdicts appear as cards: **TRUE**, **FALSE**, **MISLEADING**, or **UNVERIFIED**
-6. Every session and its claims are saved to Supabase for review
+1. You create an account / sign in (email + password)
+2. You pick a context preset (political speech, news broadcast, earnings call, podcast)
+3. The app listens via your microphone
+4. Gemini Live API transcribes the audio and flags factual claims in real time
+5. Each claim is immediately fact-checked using Gemini 2.5 Flash + Google Search
+6. Verdicts appear as cards: **TRUE**, **FALSE**, **MISLEADING**, or **UNVERIFIED**
+7. Every session and its claims are saved to Supabase under your account
 
 Verdicts are forced to **UNVERIFIED** if no citation from a trusted domain (Reuters, BBC, `.gov`, etc.) is found — no source, no verdict.
 
 ## Stack
 
-- **Frontend**: Next.js 15, TypeScript, Tailwind CSS
-- **Backend**: FastAPI (Python), Google Gemini SDK
+- **Frontend**: Next.js 15, TypeScript, Tailwind CSS, Supabase Auth (`@supabase/ssr`)
+- **Backend**: FastAPI (Python), Google Gemini SDK, JWT verification
 - **AI**: Gemini Live API (audio transcription + claim detection), Gemini 2.5 Flash (fact-checking)
-- **Database**: Supabase (sessions + claims)
+- **Database**: Supabase (accounts via Auth, sessions + claims)
 - **Deployment**: Vercel (frontend) + Render (backend)
 
 ## Architecture
 
 ```
-Browser ──getUserMedia──→ Gemini Live API (ephemeral token, WebSocket)
-  │                              │
-  │ ←── transcript deltas ───────┘
-  │ ←── report_claim() function calls
+Browser ──mic──→ FastAPI /ws/live (JWT) ──→ Gemini Live API
   │
-  ├──POST /api/fact-check──→ FastAPI ──→ Gemini 2.5 Flash + Google Search
-  │                              │              │
-  │ ←── FactCheckResponse ───────┘       source_filter.py
+  ├──POST /api/fact-check (JWT)──→ Gemini 2.5 Flash + Google Search
   │
-  └──POST /api/session──────→ Supabase (sessions + claims)
+  └──POST /api/session (JWT)─────→ Supabase (sessions.user_id + claims)
 ```
-
-Two services, no shared code:
-
-- **WebSocket path**: browser mic → backend `/ws/live` → Gemini Live API (proxied)
-- **HTTP path**: detected claims → `POST /api/fact-check` → Gemini 2.5 Flash
 
 ## Running locally
 
@@ -52,13 +43,14 @@ Two services, no shared code:
 
 ### 1. Apply the Supabase schema
 
-Run this SQL in your Supabase dashboard → SQL Editor:
+Run this SQL in your Supabase dashboard → SQL Editor (or the migration in `docs/supabase-auth-migration.sql` if tables already exist):
 
 ```sql
 CREATE TYPE verdict_type AS ENUM ('TRUE', 'FALSE', 'MISLEADING', 'UNVERIFIED');
 
 CREATE TABLE sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id),
   context_preset TEXT NOT NULL,
   context_detail TEXT,
   started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -78,29 +70,41 @@ CREATE TABLE claims (
 );
 
 CREATE INDEX idx_claims_session ON claims(session_id);
+CREATE INDEX sessions_user_id_idx ON sessions(user_id);
 ```
 
-### 2. Configure the backend
+### 2. Configure Supabase Auth
+
+1. Authentication → Providers → Email: enabled
+2. Turn **Confirm email** off for local/v1
+3. Authentication → URL configuration: add `http://localhost:3000/auth/reset` (and production URL) to redirect allow list
+4. Copy **Project URL** and **anon key** (Settings → API)
+
+### 3. Configure the backend
 
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-Edit `backend/.env`:
-
 ```env
 GEMINI_API_KEY=your_google_ai_api_key
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_...   # Secret key, not the anon key
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 ```
 
-### 3. Configure the frontend
+### 4. Configure the frontend
 
 ```bash
-echo "NEXT_PUBLIC_BACKEND_URL=http://localhost:8000" > frontend/.env.local
+cp frontend/.env.example frontend/.env.local
 ```
 
-### 4. Start both services
+```env
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+### 5. Start both services
 
 ```bash
 # Terminal 1 — Backend
@@ -110,18 +114,18 @@ cd backend && uv pip install -r requirements.txt && source .venv/bin/activate &&
 cd frontend && npm install && npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). Guests see the splash; **Begin** or **Sign in** opens auth. After sign-in, setup and listening work as before.
 
 ## API reference
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Health check |
-| `GET` | `/api/token` | Get ephemeral Gemini Live API token |
-| `POST` | `/api/fact-check` | Fact-check a claim |
-| `POST` | `/api/session` | Create a new session |
-| `GET` | `/api/session/{id}` | Get session + all claims |
-| `PATCH` | `/api/session/{id}` | End session |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/health` | public | Health check |
+| `POST` | `/api/fact-check` | JWT + ownership | Fact-check a claim |
+| `POST` | `/api/session` | JWT | Create a new session |
+| `GET` | `/api/session/{id}` | JWT + ownership | Get session + all claims |
+| `PATCH` | `/api/session/{id}` | JWT + ownership | End session |
+| `WS` | `/ws/live` | JWT (`access_token` query) | Live audio proxy |
 
 ## Key modules
 
@@ -129,26 +133,26 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | File | Purpose |
 |------|---------|
-| `main.py` | FastAPI app, CORS, all routes, WebSocket proxy to Gemini Live |
-| `fact_check.py` | Fact-check pipeline: Gemini 2.5 Flash + Google Search + source filtering |
-| `source_filter.py` | Trusted domain whitelist (Reuters, BBC, AP, `.gov`, etc.) |
-| `prompts.py` | System instructions for each context preset |
-| `gemini_live.py` | Ephemeral token generation for client-side Live API |
-| `supabase_client.py` | Supabase CRUD for sessions and claims |
+| `main.py` | FastAPI app, CORS, JWT-gated routes, WebSocket proxy |
+| `auth.py` | Verify Supabase access tokens |
+| `fact_check.py` | Fact-check pipeline |
+| `source_filter.py` | Trusted domain whitelist |
+| `prompts.py` | System instructions per context preset |
+| `supabase_client.py` | Supabase CRUD + ownership checks |
 
 ### Frontend
 
 | File | Purpose |
 |------|---------|
-| `hooks/use-gemini-live.ts` | WebSocket lifecycle, mic capture, AudioWorklet, auto-reconnect |
-| `hooks/use-fact-check.ts` | POST claims to backend, deduplicate, manage verdict state |
-| `components/verdict-card.tsx` | Single verdict with badge, summary, and source link |
-| `components/transcript-panel.tsx` | Scrolling transcript with claim highlights |
-| `app/session/[id]/page.tsx` | Live session view |
-| `app/summary/[id]/page.tsx` | Post-session summary |
+| `components/auth-modal.tsx` | Sign in / sign up / forgot password |
+| `components/auth-provider.tsx` | Auth state + helpers |
+| `hooks/use-gemini-live.ts` | WebSocket + mic (passes JWT) |
+| `hooks/use-fact-check.ts` | Authenticated fact-check calls |
+| `app/auth/reset/page.tsx` | Password recovery |
 
 ## Notes
 
 - The Live WebSocket auto-reconnects at 13.5 minutes to stay within Gemini's 15-minute session limit
 - `SUPABASE_SERVICE_ROLE_KEY` must be the new **Secret key** (`sb_secret_...`), not the legacy service_role JWT
 - Audio is captured at 16kHz PCM mono via the Web Audio API's AudioWorklet
+- Past sessions list is a follow-up; Sessions already store `user_id`
