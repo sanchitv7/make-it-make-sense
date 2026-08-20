@@ -15,11 +15,13 @@ export type TranscriptSegment =
 interface UseGeminiLiveOptions {
   preset: ContextPreset;
   onClaim: (claim: DetectedClaim) => void;
+  accessToken: string | null;
 }
 
 export function useGeminiLive({
   preset,
   onClaim,
+  accessToken,
 }: UseGeminiLiveOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
@@ -32,11 +34,13 @@ export function useGeminiLive({
   const stoppedRef = useRef(true);
   const presetRef = useRef(preset);
   const onClaimRef = useRef(onClaim);
+  const accessTokenRef = useRef(accessToken);
   // ID of the current "open" text segment being streamed into
   const currentTextSegIdRef = useRef<string | null>(null);
 
   useEffect(() => { presetRef.current = preset; }, [preset]);
   useEffect(() => { onClaimRef.current = onClaim; }, [onClaim]);
+  useEffect(() => { accessTokenRef.current = accessToken; }, [accessToken]);
 
   function teardownAudio() {
     workletRef.current?.disconnect();
@@ -149,9 +153,19 @@ export function useGeminiLive({
 
       if (stoppedRef.current) return;
 
+      const token = accessTokenRef.current;
+      if (!token) {
+        console.error("[Live] Missing access token — cannot connect");
+        return;
+      }
+
       const wsBase = BACKEND_URL.replace(/^http/, "ws");
-      const wsUrl = `${wsBase}/ws/live?preset=${presetRef.current}`;
-      console.log("[Live] Connecting to proxy:", wsUrl);
+      const params = new URLSearchParams({
+        preset: presetRef.current,
+        access_token: token,
+      });
+      const wsUrl = `${wsBase}/ws/live?${params.toString()}`;
+      console.log("[Live] Connecting to proxy:", wsUrl.replace(token, "[token]"));
 
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;

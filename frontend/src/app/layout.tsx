@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, DM_Sans, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
+import { AuthProvider } from "@/components/auth-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import "./globals.css";
 
@@ -51,16 +52,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col grain antialiased">
-        {children}
-        <ThemeToggle />
+        <AuthProvider>
+          {children}
+          <ThemeToggle />
+        </AuthProvider>
         <Script id="sw-register" strategy="afterInteractive" src="/register-sw.js" />
-        <Script id="react-grab" strategy="afterInteractive">{`
-          if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-            var s = document.createElement("script");
-            s.src = "/react-grab.js";
-            document.body.appendChild(s);
-          }
-        `}</Script>
       </body>
     </html>
   );
