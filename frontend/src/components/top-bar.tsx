@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import type { Verdict } from "@/types";
 import { ListeningIndicator } from "@/components/listening-indicator";
+import { AccountChip } from "@/components/account-chip";
+import { useAuth } from "@/components/auth-provider";
+import { accountFullNameFromMetadata } from "@/lib/account-display-name";
 
 interface TopBarProps {
   isConnected: boolean;
@@ -23,7 +26,11 @@ interface TopBarProps {
   onPause: () => void;
   onResume: () => void;
   onStop: () => void;
+  onSignOut: () => void;
 }
+
+const signOutClassName =
+  "inline-flex items-center justify-center min-h-8 px-3 font-[family:var(--font-body)] text-xs text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--border-active)] cursor-pointer transition-colors";
 
 export function TopBar({
   isConnected,
@@ -33,7 +40,9 @@ export function TopBar({
   onPause,
   onResume,
   onStop,
+  onSignOut,
 }: TopBarProps) {
+  const { user } = useAuth();
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -78,6 +87,15 @@ export function TopBar({
         </div>
 
         <div className="flex items-center gap-4 md:gap-8">
+          {user ? (
+            <div className="flex items-center gap-3">
+              <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
+              <button type="button" onClick={onSignOut} className={signOutClassName}>
+                Sign out
+              </button>
+            </div>
+          ) : null}
+
           <div className="flex items-center gap-3 font-[family:var(--font-mono)] tabular-nums">
             <AnimatePresence mode="wait">
               {isConnected ? (

@@ -6,6 +6,7 @@ Real-time AI fact-checking web app that listens to live audio, detects factual c
 
 **Account**:
 A signed-in identity (email/password via Supabase Auth) that owns listening Sessions.
+On create account, the Account stores `full_name` in Auth `user_metadata`. The UI shows a shared AccountChip (person icon + first name) in the home header and session top bar.
 _Avoid_: User (ambiguous), customer, profile
 
 **Session**:
@@ -47,10 +48,10 @@ Guests see the splash and how-it-works only. An Account is required to Begin and
 
 - `src/app/page.tsx` — Home (splash + gated setup)
 - `src/app/auth/reset/page.tsx` — Password recovery
-- `src/app/session/[id]/page.tsx` — Live listening
 - `src/app/summary/[id]/page.tsx` — Session verdict report
 - `src/app/sessions/page.tsx` — Past Sessions card board
-- `src/components/auth-provider.tsx` / `auth-modal.tsx` / `site-header.tsx`
+- `src/components/auth-provider.tsx` / `auth-modal.tsx` / `site-header.tsx` / `account-chip.tsx`
+- `src/lib/account-display-name.ts` — First-name label from Account `full_name`
 - `src/lib/supabase/` — Browser/server/middleware clients
 - `src/lib/api.ts` — Authenticated fetch helper
 - `src/hooks/use-gemini-live.ts` / `use-fact-check.ts`

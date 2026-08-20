@@ -14,7 +14,7 @@ export default function SessionPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { accessToken, loading: authLoading, user } = useAuth();
+  const { accessToken, loading: authLoading, user, signOut } = useAuth();
   const sessionId = params.id as string;
   const preset = (searchParams.get("preset") || "podcast") as ContextPreset;
   const contextDetail = searchParams.get("context") || undefined;
@@ -59,7 +59,7 @@ export default function SessionPage() {
     checkingIdsRef.current = checkingIds;
   }, [checkingIds]);
 
-  const handleStop = async () => {
+  const endSessionCleanup = async () => {
     stop();
     // Wait for all in-flight fact-checks to complete before navigating
     await new Promise<void>((resolve) => {
@@ -76,7 +76,17 @@ export default function SessionPage() {
         // ignore
       }
     }
+  };
+
+  const handleStop = async () => {
+    await endSessionCleanup();
     router.push(`/summary/${sessionId}`);
+  };
+
+  const handleSignOut = async () => {
+    await endSessionCleanup();
+    await signOut();
+    router.replace("/");
   };
 
   // Verdict counts for top bar
@@ -112,6 +122,7 @@ export default function SessionPage() {
           onPause={pause}
           onResume={resume}
           onStop={handleStop}
+          onSignOut={() => void handleSignOut()}
         />
       </div>
       <div className="mx-auto w-full max-w-[900px] px-6 py-8 md:px-12">

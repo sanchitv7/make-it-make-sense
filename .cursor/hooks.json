@@ -13,6 +13,11 @@
         "failClosed": true
       },
       {
+        "command": ".cursor/hooks/require-fresh-main-before-branch.sh",
+        "matcher": "git\\s+(switch|checkout|worktree)",
+        "failClosed": true
+      },
+      {
         "command": ".cursor/hooks/require-pr-up-to-date.sh",
         "matcher": "\\bgh\\b",
         "failClosed": true
