@@ -91,3 +91,24 @@ Rules:
 - Credible sources exist in every country — The Hindu, NHK, Al Jazeera, Der Spiegel, and any official government or institutional page are all valid
 - If you cannot find a source with credibility ≥ 3, use UNVERIFIED
 - Be concise in your summary"""
+
+SESSION_TITLE_BLURB_PROMPT = """Given a listening session's context and its fact-checked claims, write a short label and a 1-2 line blurb for a session card.
+
+Context preset: {context_preset}
+Context detail (what the listener said they were watching/hearing — fold this into the blurb in natural prose; do not quote it raw): {context_detail}
+
+Claims (verdict then text):
+{claims_block}
+
+Respond with JSON only:
+{{
+  "title": "A short customized heading (max ~8 words)",
+  "blurb": "One or two plain sentences that briefly situate the listening context, then what was claimed and how it held up. No labels like Summary."
+}}
+
+Rules:
+- Title is a card heading, not a generic phrase like "Session report"
+- Blurb is plain prose, 1-2 lines, no bullet points
+- If context detail is provided (not "(none)"), weave a brief natural mention of what was being listened to into the blurb — never paste the user's raw wording as a separate line or quote
+- Do not invent claims that are not listed
+- Do not include the words "summary" or "report" as a label"""

@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from fastapi import HTTPException, status
 from supabase import Client, create_client
 
+from session_cards import build_session_cards
+
 _client: Client | None = None
 
 
@@ -76,6 +78,43 @@ def end_session(session_id: str) -> None:
     get_client().table("sessions").update({"ended_at": datetime.now(UTC).isoformat()}).eq(
         "id", session_id
     ).execute()
+
+
+def update_session_blurb(session_id: str, title: str, blurb: str) -> None:
+    get_client().table("sessions").update({"title": title, "blurb": blurb}).eq(
+        "id", session_id
+    ).execute()
+
+
+def list_sessions_for_user(user_id: str, *, limit: int = 100) -> list:
+    """Ended sessions with ≥1 claim for the Account, newest first."""
+    sessions_result = (
+        get_client()
+        .table("sessions")
+        .select("*")
+        .eq("user_id", user_id)
+        .not_.is_("ended_at", "null")
+        .order("started_at", desc=True)
+        .limit(limit * 2)
+        .execute()
+    )
+    sessions = sessions_result.data or []
+    if not sessions:
+        return []
+
+    session_ids = [s["id"] for s in sessions]
+    claims_result = (
+        get_client()
+        .table("claims")
+        .select("session_id, verdict")
+        .in_("session_id", session_ids)
+        .execute()
+    )
+    claims_by_session: dict[str, list[dict]] = {}
+    for claim in claims_result.data or []:
+        claims_by_session.setdefault(claim["session_id"], []).append(claim)
+
+    return build_session_cards(sessions, claims_by_session, limit=limit)
 
 
 def upsert_claim(claim_data: dict) -> dict:

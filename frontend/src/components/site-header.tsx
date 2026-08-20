@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
 
 interface SiteHeaderProps {
-  onSignInClick: () => void;
+  onSignInClick?: () => void;
 }
 
 const authControlClassName =
@@ -25,15 +26,18 @@ export function SiteHeader({ onSignInClick }: SiteHeaderProps) {
             >
               {user.email}
             </span>
+            <Link href="/sessions" className={authControlClassName}>
+              Sessions
+            </Link>
             <button type="button" onClick={() => void signOut()} className={authControlClassName}>
               Sign out
             </button>
           </>
-        ) : (
+        ) : onSignInClick ? (
           <button type="button" onClick={onSignInClick} className={authControlClassName}>
             Sign in
           </button>
-        )}
+        ) : null}
       </div>
     </header>
   );
