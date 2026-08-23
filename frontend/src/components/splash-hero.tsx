@@ -147,7 +147,7 @@ export function SplashHero({ onBeginClick, sectionId = "splash-hero" }: SplashHe
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)] px-6 py-20 md:px-12"
+      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)] px-6 pt-28 pb-20 md:px-12 md:pt-32"
     >
       <div className="flex w-full max-w-[900px] flex-col items-start space-y-12">
         <motion.h1

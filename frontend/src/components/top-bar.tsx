@@ -77,8 +77,11 @@ export function TopBar({
     <header className="sticky top-0 isolate z-50 w-full" style={{ borderRadius: 0 }}>
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[var(--bg-card)]"
-        style={{ borderTop: "6px solid var(--border-active)" }}
+        className="pointer-events-none absolute inset-0 border-b border-[var(--border-subtle)] backdrop-blur-xl backdrop-saturate-150"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--bg-card) 78%, transparent)",
+          borderTop: "6px solid var(--border-active)",
+        }}
       />
       <div
         className="relative flex items-center justify-between px-4 py-3 md:px-6"

@@ -27,17 +27,15 @@ export function SiteHeader({ onSignInClick, showBrandTitle = true }: SiteHeaderP
   }, []);
 
   const authReady = mounted && !loading;
-  const solidBar = showBrandTitle;
 
   return (
     <header className="fixed top-0 right-0 left-0 isolate z-50 w-full" style={{ borderRadius: 0 }}>
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 border-b border-[var(--border-subtle)] backdrop-blur-xl backdrop-saturate-150"
         style={{
-          backgroundColor: solidBar ? "var(--bg-card)" : "transparent",
-          borderTop: solidBar ? "6px solid var(--border-active)" : "none",
-          boxShadow: solidBar ? "0 1px 0 var(--border-subtle)" : "none",
+          backgroundColor: "color-mix(in srgb, var(--bg-card) 78%, transparent)",
+          borderTop: showBrandTitle ? "6px solid var(--border-active)" : "6px solid transparent",
         }}
       />
 
@@ -51,7 +49,9 @@ export function SiteHeader({ onSignInClick, showBrandTitle = true }: SiteHeaderP
           <div className="flex items-baseline overflow-hidden">
             <BrandTitle />
           </div>
-        ) : null}
+        ) : (
+          <div className="min-w-0 flex-1" aria-hidden="true" />
+        )}
 
         <div className="flex items-center gap-4">
           {!authReady ? (
