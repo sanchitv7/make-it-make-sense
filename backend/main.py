@@ -14,6 +14,7 @@ from google.genai import types
 import supabase_client
 from auth import require_user, verify_access_token
 from fact_check import fact_check_claim, init_pool
+from live_config import build_live_connect_config
 from models import (
     CreateSessionRequest,
     CreateSessionResponse,
@@ -108,51 +109,7 @@ async def live_ws(
 
     system_instruction = PROMPTS.get(preset, PROMPTS["podcast"])
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-
-    config = types.LiveConnectConfig(
-        response_modalities=["AUDIO"],
-        system_instruction=system_instruction,
-        input_audio_transcription=types.AudioTranscriptionConfig(),
-        realtime_input_config=types.RealtimeInputConfig(
-            automatic_activity_detection=types.AutomaticActivityDetection(
-                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_HIGH,
-                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
-                prefix_padding_ms=20,
-                silence_duration_ms=400,
-            ),
-            activity_handling=types.ActivityHandling.NO_INTERRUPTION,
-            turn_coverage=types.TurnCoverage.TURN_INCLUDES_ALL_INPUT,
-        ),
-        context_window_compression=types.ContextWindowCompressionConfig(
-            sliding_window=types.SlidingWindow(),
-        ),
-        tools=[
-            types.Tool(
-                function_declarations=[
-                    types.FunctionDeclaration(
-                        name="report_claim",
-                        description="Report a verifiable factual claim heard in the audio",
-                        parameters=types.Schema(
-                            type="OBJECT",
-                            properties={
-                                "claim_text": types.Schema(
-                                    type="STRING", description="The claim verbatim"
-                                ),
-                                "timestamp_seconds": types.Schema(
-                                    type="INTEGER", description="Seconds since session start"
-                                ),
-                                "context": types.Schema(
-                                    type="STRING",
-                                    description="1-2 surrounding sentences providing context for the claim (who is speaking, what they were discussing)",
-                                ),
-                            },
-                            required=["claim_text", "timestamp_seconds"],
-                        ),
-                    )
-                ]
-            )
-        ],
-    )
+    config = build_live_connect_config(system_instruction)
 
     try:
         async with client.aio.live.connect(model=GEMINI_MODEL, config=config) as session:
