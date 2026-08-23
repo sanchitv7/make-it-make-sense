@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandTitle } from "@/components/brand-title";
 import { AccountChip } from "@/components/account-chip";
 import { useAuth } from "@/components/auth-provider";
 import { accountFullNameFromMetadata } from "@/lib/account-display-name";
@@ -17,44 +18,43 @@ export function SiteHeader({ onSignInClick }: SiteHeaderProps) {
   const { user, loading, signOut, accessToken } = useAuth();
 
   return (
-    <header className="fixed top-0 right-0 left-0 z-40 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-6 py-4 md:px-12">
-      <Link
-        href="/"
-        className="leading-none font-[family:var(--font-display)] font-bold tracking-tight text-[var(--text-primary)] transition-opacity hover:opacity-70"
-        style={{ fontSize: "clamp(1rem, 2.5vw, 1.25rem)" }}
-        aria-label="Make It Make Sense — Home"
-      >
-        <span className="hidden sm:inline">MAKE IT MAKE SENSE</span>
-        <span className="sm:hidden">M·I·M·S</span>
-      </Link>
+    <header
+      className="fixed top-0 right-0 left-0 z-40 w-full border-t-[6px] border-[var(--border-active)] bg-[var(--bg-card)]"
+      style={{ borderRadius: 0 }}
+    >
+      <div className="flex items-center justify-between px-4 py-3 md:px-6">
+        <div className="flex items-baseline overflow-hidden">
+          <BrandTitle />
+        </div>
 
-      <div className="flex items-center gap-4">
-        {loading ? (
-          <div className="min-h-10 min-w-[5.5rem]" aria-hidden="true" />
-        ) : user ? (
-          <>
-            <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
-            <Link
-              href="/sessions"
-              className={authControlClassName}
-              onPointerEnter={() => {
-                if (accessToken) prefetchSessionList(accessToken);
-              }}
-              onFocus={() => {
-                if (accessToken) prefetchSessionList(accessToken);
-              }}
-            >
-              Sessions
-            </Link>
-            <button type="button" onClick={() => void signOut()} className={authControlClassName}>
-              Sign out
+        <div className="flex items-center gap-4">
+          {loading ? (
+            <div className="min-h-10 min-w-[5.5rem]" aria-hidden="true" />
+          ) : user ? (
+            <>
+              <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
+              <Link
+                href="/sessions"
+                className={authControlClassName}
+                onPointerEnter={() => {
+                  if (accessToken) prefetchSessionList(accessToken);
+                }}
+                onFocus={() => {
+                  if (accessToken) prefetchSessionList(accessToken);
+                }}
+              >
+                Sessions
+              </Link>
+              <button type="button" onClick={() => void signOut()} className={authControlClassName}>
+                Sign out
+              </button>
+            </>
+          ) : onSignInClick ? (
+            <button type="button" onClick={onSignInClick} className={authControlClassName}>
+              Sign in
             </button>
-          </>
-        ) : onSignInClick ? (
-          <button type="button" onClick={onSignInClick} className={authControlClassName}>
-            Sign in
-          </button>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </header>
   );

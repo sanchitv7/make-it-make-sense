@@ -6,6 +6,7 @@ import { useGeminiLive } from "@/hooks/use-gemini-live";
 import { useFactCheck } from "@/hooks/use-fact-check";
 import { VerdictFeed } from "@/components/verdict-feed";
 import { TopBar } from "@/components/top-bar";
+import { SessionExitDialog } from "@/components/session-exit-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
 import type { ContextPreset, DetectedClaim, Verdict } from "@/types";
@@ -20,6 +21,7 @@ export default function SessionPage() {
   const contextDetail = searchParams.get("context") || undefined;
 
   const [claims, setClaims] = useState<DetectedClaim[]>([]);
+  const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const startedRef = useRef(false);
 
   const { verdicts, checkingIds, checkClaim } = useFactCheck({
@@ -83,6 +85,19 @@ export default function SessionPage() {
     router.push(`/summary/${sessionId}`);
   };
 
+  const handleGoHome = async () => {
+    setExitDialogOpen(false);
+    await endSessionCleanup();
+    router.push("/");
+  };
+
+  const handleTitleClick = () => {
+    if (isConnected && !isPaused) {
+      pause();
+    }
+    setExitDialogOpen(true);
+  };
+
   const handleSignOut = async () => {
     await endSessionCleanup();
     await signOut();
@@ -123,8 +138,15 @@ export default function SessionPage() {
           onResume={resume}
           onStop={handleStop}
           onSignOut={() => void handleSignOut()}
+          onTitleClick={handleTitleClick}
         />
       </div>
+      <SessionExitDialog
+        open={exitDialogOpen}
+        onClose={() => setExitDialogOpen(false)}
+        onEndAndGoHome={() => void handleGoHome()}
+        onResume={resume}
+      />
       <div className="mx-auto w-full max-w-[900px] px-6 py-8 md:px-12">
         <div>
           <VerdictFeed claims={claims} verdicts={verdicts} checkingIds={checkingIds} />

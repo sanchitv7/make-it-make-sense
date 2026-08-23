@@ -111,7 +111,7 @@ export default function SummaryPage() {
     <>
       <SiteHeader />
       <main
-        className="min-h-screen px-6 pt-28 pb-16 text-[var(--text-primary)] md:px-12"
+        className="min-h-screen px-6 pt-32 pb-16 text-[var(--text-primary)] md:px-12"
         style={{ backgroundColor: "var(--bg-primary)" }}
       >
         <div className="mx-auto w-full max-w-[900px]">
