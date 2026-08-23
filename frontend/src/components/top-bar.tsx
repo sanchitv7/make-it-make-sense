@@ -168,36 +168,23 @@ export function TopBar({
       className="app-header-frost sticky top-0 z-[60] w-full"
       style={{ borderRadius: 0, borderTop: "6px solid var(--border-active)" }}
     >
-      <div className="px-4 pb-3 md:px-6">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 px-4 pb-3 md:flex-row md:items-center md:justify-between md:gap-8 md:px-6">
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
           <div className="flex min-w-0 items-baseline overflow-hidden">
             <BrandTitle onClick={onTitleClick} />
           </div>
 
-          <div className="flex shrink-0 items-center gap-4 md:gap-8">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
-                <button type="button" onClick={onSignOut} className={signOutClassName}>
-                  Sign out
-                </button>
-              </div>
-            ) : null}
-
-            <div className="hidden items-center gap-8 md:flex">
-              <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
-              <SessionControls
-                isConnected={isConnected}
-                isPaused={isPaused}
-                onPause={onPause}
-                onResume={onResume}
-                onStop={onStop}
-              />
+          {user ? (
+            <div className="flex shrink-0 items-center gap-3">
+              <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
+              <button type="button" onClick={onSignOut} className={signOutClassName}>
+                Sign out
+              </button>
             </div>
-          </div>
+          ) : null}
         </div>
 
-        <div className="mt-2 flex items-center justify-between md:hidden">
+        <div className="flex items-center justify-between gap-3 md:justify-end md:gap-8">
           <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
           <SessionControls
             isConnected={isConnected}
