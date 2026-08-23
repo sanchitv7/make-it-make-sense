@@ -16,9 +16,10 @@ import {
 
 interface SplashHeroProps {
   onBeginClick: () => void;
+  sectionId?: string;
 }
 
-export function SplashHero({ onBeginClick }: SplashHeroProps) {
+export function SplashHero({ onBeginClick, sectionId = "splash-hero" }: SplashHeroProps) {
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
@@ -138,19 +139,20 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
     },
   ];
 
-  const headline = "Hear a claim. Know if it holds up.";
+  const headline = "MAKE IT MAKE SENSE";
 
   return (
     <motion.section
+      id={sectionId}
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)] px-6 pt-28 pb-20 md:px-12 md:pt-32"
+      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)] px-6 py-20 md:px-12"
     >
       <div className="flex w-full max-w-[900px] flex-col items-start space-y-12">
         <motion.h1
-          className="w-full leading-tight font-[family:var(--font-display)] font-bold tracking-tight text-[var(--text-primary)]"
-          style={{ fontSize: "clamp(2.5rem, 8vw, 5rem)" }}
+          className="w-full leading-none font-[family:var(--font-display)] font-bold tracking-tight text-[var(--text-primary)]"
+          style={{ fontSize: "clamp(2.5rem, 8vw, 6rem)" }}
         >
           {headline.split(" ").map((word, i) => (
             <motion.span
@@ -165,9 +167,9 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
 
         <motion.p
           variants={fadeUpVariants}
-          className="max-w-2xl text-lg leading-relaxed font-[family:var(--font-body)] text-[var(--text-secondary)] md:text-xl"
+          className="max-w-2xl text-xl leading-relaxed font-[family:var(--font-body)] text-[var(--text-secondary)] md:text-2xl"
         >
-          Real-time fact-checking while you listen.
+          Hear a claim. Know if it holds up.
         </motion.p>
 
         {/* Live Demo — 2×2 fixed grid */}
