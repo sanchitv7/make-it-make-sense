@@ -50,44 +50,23 @@ function ElapsedTime({ elapsed }: { elapsed: number }) {
 }
 
 function LiveBadge({ isConnected, isPaused }: { isConnected: boolean; isPaused: boolean }) {
+  if (!isConnected) {
+    return (
+      <span className="text-xs font-bold tracking-widest text-[var(--text-muted)] uppercase">
+        OFFLINE
+      </span>
+    );
+  }
+
   return (
-    <div className="flex items-center font-[family:var(--font-mono)] tabular-nums">
-      <AnimatePresence mode="wait" initial={false}>
-        {isConnected ? (
-          <motion.div
-            key="connected"
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            className="flex items-center gap-1.5 text-xs font-bold md:text-sm"
-          >
-            <motion.div
-              animate={isPaused ? { opacity: 1 } : { opacity: [1, 0.4, 1] }}
-              transition={
-                isPaused ? { duration: 0 } : { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
-              }
-              className="flex items-center justify-center"
-            >
-              <Radio
-                size={12}
-                className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}
-              />
-            </motion.div>
-            <span className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}>
-              {isPaused ? "PAUSED" : "LIVE"}
-            </span>
-          </motion.div>
-        ) : (
-          <motion.span
-            key="offline"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-xs font-bold tracking-widest text-[var(--text-muted)] uppercase"
-          >
-            OFFLINE
-          </motion.span>
-        )}
-      </AnimatePresence>
+    <div className="flex items-center gap-1.5 text-xs font-bold md:text-sm">
+      <Radio
+        size={12}
+        className={isPaused ? "text-[var(--accent-amber)]" : "animate-pulse text-[#B91C1C]"}
+      />
+      <span className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}>
+        {isPaused ? "PAUSED" : "LIVE"}
+      </span>
     </div>
   );
 }
@@ -102,7 +81,7 @@ function LiveStatus({
   elapsed: number;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 font-[family:var(--font-mono)] tabular-nums">
       <LiveBadge isConnected={isConnected} isPaused={isPaused} />
       {isConnected ? (
         <span className="border-l border-[var(--border-subtle)] pl-3">
