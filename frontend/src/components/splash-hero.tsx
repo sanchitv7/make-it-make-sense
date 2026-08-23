@@ -138,20 +138,19 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
     },
   ];
 
-  const headline = "MAKE IT MAKE SENSE";
+  const headline = "Hear a claim. Know if it holds up.";
 
   return (
     <motion.section
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)] px-6 py-20 md:px-12"
+      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)] px-6 pt-28 pb-20 md:px-12 md:pt-32"
     >
       <div className="flex w-full max-w-[900px] flex-col items-start space-y-12">
-        {/* Headline */}
         <motion.h1
-          className="w-full leading-none font-[family:var(--font-display)] font-bold tracking-tight text-[var(--text-primary)]"
-          style={{ fontSize: "clamp(2.5rem, 8vw, 6rem)" }}
+          className="w-full leading-tight font-[family:var(--font-display)] font-bold tracking-tight text-[var(--text-primary)]"
+          style={{ fontSize: "clamp(2.5rem, 8vw, 5rem)" }}
         >
           {headline.split(" ").map((word, i) => (
             <motion.span
@@ -164,12 +163,11 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
           ))}
         </motion.h1>
 
-        {/* Subtitle */}
         <motion.p
           variants={fadeUpVariants}
-          className="max-w-2xl text-xl leading-relaxed font-[family:var(--font-body)] text-[var(--text-secondary)] md:text-2xl"
+          className="max-w-2xl text-lg leading-relaxed font-[family:var(--font-body)] text-[var(--text-secondary)] md:text-xl"
         >
-          Hear a claim. Know if it holds up.
+          Real-time fact-checking while you listen.
         </motion.p>
 
         {/* Live Demo — 2×2 fixed grid */}
