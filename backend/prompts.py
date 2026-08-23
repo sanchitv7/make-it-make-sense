@@ -93,7 +93,7 @@ Rules:
 - If you cannot find a source with credibility ≥ 3, use UNVERIFIED
 - Be concise in your summary"""
 
-SESSION_TITLE_BLURB_PROMPT = """Given a listening session's context and its fact-checked claims, write a short label and a 1-2 line blurb for a session card.
+SESSION_TITLE_BLURB_PROMPT = """Given a listening session's context and its claims, write a short headline and a 1-2 line blurb for a session card.
 
 Context preset: {context_preset}
 Context detail (what the listener said they were watching/hearing — fold this into the blurb in natural prose; do not quote it raw): {context_detail}
@@ -104,12 +104,24 @@ Claims (verdict then text):
 Respond with JSON only:
 {{
   "title": "A short customized heading (max ~8 words)",
-  "blurb": "One or two plain sentences that briefly situate the listening context, then what was claimed and how it held up. No labels like Summary."
+  "blurb": "One or two punchy sentences about the notable claims and how they held up."
 }}
 
+Examples:
+- Bad title: "Fact-Checking Planetary and Lunar Claims"
+  Good title: "Earth's Extra Moon and a Tiny Sun"
+- Bad title: "Fact-Checking Your Recent Listening Session"
+  Good title: "India's Courts and a Tech Mix-up"
+- Bad blurb: "While listening to this podcast episode, several scientific inaccuracies were raised regarding our solar system."
+  Good blurb: "Earth supposedly has two moons and the Sun is tiny — both claims fell apart."
+
 Rules:
-- Title is a card heading, not a generic phrase like "Session report"
-- Blurb is plain prose, 1-2 lines, no bullet points
+- Title names the topic, like a short headline — not a job description
+- Never start the title with "Fact-Checking", "Fact Check", or "Checking"
+- Never use meta labels like "Session", "Listening session", or "Listening"
+- Blurb: 1-2 punchy sentences about the most notable claims and how they held up
+- Do not open the blurb with "While listening", "This session", or "Your recent session"
+- Blurb is plain prose, no bullet points
 - If context detail is provided (not "(none)"), weave a brief natural mention of what was being listened to into the blurb — never paste the user's raw wording as a separate line or quote
 - Do not invent claims that are not listed
 - Do not include the words "summary" or "report" as a label"""
