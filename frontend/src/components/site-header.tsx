@@ -27,20 +27,25 @@ export function SiteHeader({ onSignInClick, showBrandTitle = true }: SiteHeaderP
   }, []);
 
   const authReady = mounted && !loading;
+  const solidBar = showBrandTitle;
 
   return (
-    <header
-      className={`fixed top-0 right-0 left-0 z-40 w-full transition-[background-color,border-color,box-shadow] duration-300 ${
-        showBrandTitle
-          ? "border-t-[6px] border-[var(--border-active)] bg-[var(--bg-card)] shadow-sm"
-          : "border-b border-transparent bg-transparent"
-      }`}
-      style={{ borderRadius: 0 }}
-    >
+    <header className="fixed top-0 right-0 left-0 isolate z-50 w-full" style={{ borderRadius: 0 }}>
       <div
-        className={`flex items-center px-4 py-3 md:px-6 ${
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundColor: solidBar ? "var(--bg-card)" : "transparent",
+          borderTop: solidBar ? "6px solid var(--border-active)" : "none",
+          boxShadow: solidBar ? "0 1px 0 var(--border-subtle)" : "none",
+        }}
+      />
+
+      <div
+        className={`relative flex items-center px-4 py-3 md:px-6 ${
           showBrandTitle ? "justify-between" : "justify-end"
         }`}
+        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
       >
         {showBrandTitle ? (
           <div className="flex items-baseline overflow-hidden">
