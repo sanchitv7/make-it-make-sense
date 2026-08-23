@@ -52,7 +52,7 @@ function ElapsedTime({ elapsed }: { elapsed: number }) {
 function LiveBadge({ isConnected, isPaused }: { isConnected: boolean; isPaused: boolean }) {
   return (
     <div className="flex items-center font-[family:var(--font-mono)] tabular-nums">
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         {isConnected ? (
           <motion.div
             key="connected"
@@ -219,17 +219,14 @@ export function TopBar({
         </div>
 
         <div className="mt-2 flex items-center justify-between md:hidden">
-          <ElapsedTime elapsed={elapsed} />
-          <div className="flex items-center gap-3">
-            <LiveBadge isConnected={isConnected} isPaused={isPaused} />
-            <SessionControls
-              isConnected={isConnected}
-              isPaused={isPaused}
-              onPause={onPause}
-              onResume={onResume}
-              onStop={onStop}
-            />
-          </div>
+          <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
+          <SessionControls
+            isConnected={isConnected}
+            isPaused={isPaused}
+            onPause={onPause}
+            onResume={onResume}
+            onStop={onStop}
+          />
         </div>
       </div>
 
