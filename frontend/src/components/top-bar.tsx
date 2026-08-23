@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle,
@@ -77,13 +78,15 @@ export function TopBar({
     >
       <div className="flex items-center justify-between px-4 py-3 md:px-6">
         <div className="flex items-baseline overflow-hidden">
-          <h1
-            className="leading-none font-[family:var(--font-display)] font-black tracking-tighter whitespace-nowrap text-[var(--text-primary)] select-none"
+          <Link
+            href="/"
+            className="leading-none font-[family:var(--font-display)] font-black tracking-tighter whitespace-nowrap text-[var(--text-primary)] transition-opacity select-none hover:opacity-70"
             style={{ fontSize: "clamp(1.8rem, 4.5vw, 3rem)", borderRadius: 0 }}
+            aria-label="Make It Make Sense — Home"
           >
             <span className="hidden sm:inline">MAKE IT MAKE SENSE</span>
             <span className="sm:hidden">M·I·M·S</span>
-          </h1>
+          </Link>
         </div>
 
         <div className="flex items-center gap-4 md:gap-8">

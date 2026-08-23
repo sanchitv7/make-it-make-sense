@@ -17,7 +17,17 @@ export function SiteHeader({ onSignInClick }: SiteHeaderProps) {
   const { user, loading, signOut, accessToken } = useAuth();
 
   return (
-    <header className="fixed top-0 right-0 left-0 z-40 flex items-center justify-end border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-6 py-4 md:px-12">
+    <header className="fixed top-0 right-0 left-0 z-40 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-6 py-4 md:px-12">
+      <Link
+        href="/"
+        className="leading-none font-[family:var(--font-display)] font-bold tracking-tight text-[var(--text-primary)] transition-opacity hover:opacity-70"
+        style={{ fontSize: "clamp(1rem, 2.5vw, 1.25rem)" }}
+        aria-label="Make It Make Sense — Home"
+      >
+        <span className="hidden sm:inline">MAKE IT MAKE SENSE</span>
+        <span className="sm:hidden">M·I·M·S</span>
+      </Link>
+
       <div className="flex items-center gap-4">
         {loading ? (
           <div className="min-h-10 min-w-[5.5rem]" aria-hidden="true" />
