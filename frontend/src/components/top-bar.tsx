@@ -30,6 +30,8 @@ interface TopBarProps {
   onStop: () => void;
   onSignOut: () => void;
   onTitleClick: () => void;
+  /** Preview-only account label so demos can show chrome without a live session. */
+  accountFullName?: string;
 }
 
 function AccountChrome({ fullName, onSignOut }: { fullName: string; onSignOut: () => void }) {
@@ -150,6 +152,7 @@ export function TopBar({
   onStop,
   onSignOut,
   onTitleClick,
+  accountFullName,
 }: TopBarProps) {
   const { user } = useAuth();
   const [elapsed, setElapsed] = useState(0);
@@ -171,7 +174,8 @@ export function TopBar({
   }, [isConnected]);
 
   const hasVerdicts = Object.values(verdictCounts).some((count) => count > 0);
-  const accountName = user ? accountFullNameFromMetadata(user.user_metadata) : "";
+  const accountName =
+    accountFullName || (user ? accountFullNameFromMetadata(user.user_metadata) : "");
 
   return (
     <header
@@ -183,7 +187,7 @@ export function TopBar({
           <div className="shrink-0">
             <BrandTitle onClick={onTitleClick} />
           </div>
-          {user ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
+          {accountName ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
         </div>
         <div className="flex items-center justify-between gap-3 px-4 pb-3">
           <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
@@ -202,7 +206,7 @@ export function TopBar({
           <BrandTitle onClick={onTitleClick} />
         </div>
         <div className="flex shrink-0 items-center gap-8">
-          {user ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
+          {accountName ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
           <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
           <SessionControls
             isConnected={isConnected}
