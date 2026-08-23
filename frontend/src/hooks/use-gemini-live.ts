@@ -4,8 +4,18 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { DetectedClaim, ContextPreset } from "@/types";
 import { backendUrl } from "@/lib/api";
+import { DEFAULT_ENERGY_VAD_CONFIG, EnergyVad } from "@/lib/vad-energy";
 
 const RECONNECT_BEFORE_MS = 13.5 * 60 * 1000;
+const PCM_CHUNK_SAMPLES = 1024;
+
+const MIC_CONSTRAINTS: MediaTrackConstraints = {
+  sampleRate: 16000,
+  channelCount: 1,
+  echoCancellation: false,
+  noiseSuppression: true,
+  autoGainControl: false,
+};
 
 export type TranscriptSegment =
   | { type: "text"; id: string; text: string }
@@ -30,6 +40,7 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
   const presetRef = useRef(preset);
   const onClaimRef = useRef(onClaim);
   const accessTokenRef = useRef(accessToken);
+  const vadRef = useRef(new EnergyVad(DEFAULT_ENERGY_VAD_CONFIG));
   // ID of the current "open" text segment being streamed into
   const currentTextSegIdRef = useRef<string | null>(null);
 
@@ -94,6 +105,21 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     });
   }
 
+  function resetVad() {
+    vadRef.current.reset();
+  }
+
+  function handleVadFrame(ws: WebSocket, rms: number, frameMs: number) {
+    const events = vadRef.current.processFrame(rms, frameMs);
+    for (const event of events) {
+      if (event === "speech_start") {
+        ws.send(JSON.stringify({ type: "activity_start" }));
+      } else if (event === "speech_end") {
+        ws.send(JSON.stringify({ type: "activity_end" }));
+      }
+    }
+  }
+
   async function startAudio(ws: WebSocket) {
     console.log("[Live] Starting audio");
     const audioCtx = new AudioContext({ sampleRate: 16000 });
@@ -103,18 +129,27 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
 
     const workletCode = `
       class PCMProcessor extends AudioWorkletProcessor {
-        _buf = new Int16Array(2048);
+        _buf = new Int16Array(${PCM_CHUNK_SAMPLES});
         _i = 0;
         process(inputs) {
           const ch = inputs[0]?.[0];
           if (!ch) return true;
+          let sumSq = 0;
           for (let s = 0; s < ch.length; s++) {
-            this._buf[this._i++] = Math.max(-32768, Math.min(32767, ch[s] * 32768));
+            const sample = ch[s];
+            sumSq += sample * sample;
+            this._buf[this._i++] = Math.max(-32768, Math.min(32767, sample * 32768));
             if (this._i >= this._buf.length) {
-              this.port.postMessage(this._buf.buffer.slice(0, this._i * 2));
+              this.port.postMessage({
+                type: "audio",
+                pcm: this._buf.buffer.slice(0, this._i * 2),
+              });
               this._i = 0;
             }
           }
+          const rms = Math.sqrt(sumSq / ch.length);
+          const frameMs = (ch.length / ${DEFAULT_ENERGY_VAD_CONFIG.sampleRate}) * 1000;
+          this.port.postMessage({ type: "rms", rms, frameMs });
           return true;
         }
       }
@@ -129,9 +164,16 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     const node = new AudioWorkletNode(audioCtx, "pcm-proc");
     workletRef.current = node;
 
-    node.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
+    node.port.onmessage = (
+      e: MessageEvent<{ type: string; pcm?: ArrayBuffer; rms?: number; frameMs?: number }>,
+    ) => {
       if (ws.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify({ type: "audio", data: bufToBase64(e.data) }));
+      const msg = e.data;
+      if (msg.type === "audio" && msg.pcm) {
+        ws.send(JSON.stringify({ type: "audio", data: bufToBase64(msg.pcm) }));
+      } else if (msg.type === "rms" && msg.rms != null && msg.frameMs != null) {
+        handleVadFrame(ws, msg.rms, msg.frameMs);
+      }
     };
 
     source.connect(node);
@@ -146,13 +188,7 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     try {
       if (!mediaStreamRef.current) {
         mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            sampleRate: 16000,
-            channelCount: 1,
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false,
-          },
+          audio: MIC_CONSTRAINTS,
         });
         console.log("[Live] Mic acquired");
       }
@@ -204,6 +240,7 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
             return;
           }
           console.log("[Live] Setup complete — starting audio");
+          resetVad();
           setIsConnected(true);
           await startAudio(ws);
           return;
@@ -290,14 +327,9 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     if (!isPaused) return;
     try {
       mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: 16000,
-          channelCount: 1,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
+        audio: MIC_CONSTRAINTS,
       });
+      resetVad();
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         await startAudio(wsRef.current);
       }
@@ -311,6 +343,7 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     stoppedRef.current = false;
     setSegments([]);
     currentTextSegIdRef.current = null;
+    resetVad();
     setIsConnected(false);
     setIsPaused(false);
     await doConnect();
