@@ -18,6 +18,7 @@ import { ListeningIndicator } from "@/components/listening-indicator";
 import { AccountChip } from "@/components/account-chip";
 import { useAuth } from "@/components/auth-provider";
 import { accountFullNameFromMetadata } from "@/lib/account-display-name";
+import { headerAuthControlClassName } from "@/lib/header-auth-control";
 
 interface TopBarProps {
   isConnected: boolean;
@@ -29,10 +30,20 @@ interface TopBarProps {
   onStop: () => void;
   onSignOut: () => void;
   onTitleClick: () => void;
+  /** Preview-only account label so demos can show chrome without a live session. */
+  accountFullName?: string;
 }
 
-const signOutClassName =
-  "inline-flex items-center justify-center min-h-8 px-3 font-[family:var(--font-body)] text-xs text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--border-active)] cursor-pointer transition-colors";
+function AccountChrome({ fullName, onSignOut }: { fullName: string; onSignOut: () => void }) {
+  return (
+    <div className="flex shrink-0 items-center gap-3">
+      <AccountChip fullName={fullName} />
+      <button type="button" onClick={onSignOut} className={headerAuthControlClassName}>
+        Sign out
+      </button>
+    </div>
+  );
+}
 
 function formatElapsed(seconds: number): string {
   const hrs = Math.floor(seconds / 3600);
@@ -141,6 +152,7 @@ export function TopBar({
   onStop,
   onSignOut,
   onTitleClick,
+  accountFullName,
 }: TopBarProps) {
   const { user } = useAuth();
   const [elapsed, setElapsed] = useState(0);
@@ -162,29 +174,39 @@ export function TopBar({
   }, [isConnected]);
 
   const hasVerdicts = Object.values(verdictCounts).some((count) => count > 0);
+  const accountName =
+    accountFullName || (user ? accountFullNameFromMetadata(user.user_metadata) : "");
 
   return (
     <header
       className="app-header-frost sticky top-0 z-[60] w-full"
       style={{ borderRadius: 0, borderTop: "6px solid var(--border-active)" }}
     >
-      <div className="flex flex-col gap-2 px-4 pb-3 md:flex-row md:items-center md:justify-between md:gap-8 md:px-6">
-        <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
-          <div className="flex min-w-0 items-baseline overflow-hidden">
+      <div className="md:hidden">
+        <div className="flex items-center justify-between gap-3 px-4 pb-2">
+          <div className="shrink-0">
             <BrandTitle onClick={onTitleClick} />
           </div>
-
-          {user ? (
-            <div className="flex shrink-0 items-center gap-3">
-              <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
-              <button type="button" onClick={onSignOut} className={signOutClassName}>
-                Sign out
-              </button>
-            </div>
-          ) : null}
+          {accountName ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
         </div>
+        <div className="flex items-center justify-between gap-3 px-4 pb-3">
+          <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
+          <SessionControls
+            isConnected={isConnected}
+            isPaused={isPaused}
+            onPause={onPause}
+            onResume={onResume}
+            onStop={onStop}
+          />
+        </div>
+      </div>
 
-        <div className="flex items-center justify-between gap-3 md:justify-end md:gap-8">
+      <div className="hidden items-center justify-between px-6 pb-3 md:flex">
+        <div className="shrink-0">
+          <BrandTitle onClick={onTitleClick} />
+        </div>
+        <div className="flex shrink-0 items-center gap-8">
+          {accountName ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
           <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
           <SessionControls
             isConnected={isConnected}

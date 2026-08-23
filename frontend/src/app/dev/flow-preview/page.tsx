@@ -16,6 +16,7 @@ export default function FlowPreviewPage() {
         isPaused={isPaused}
         verdictCounts={{ TRUE: 1, FALSE: 0, MISLEADING: 0, UNVERIFIED: 1 }}
         totalClaims={2}
+        accountFullName="Sanchit"
         onPause={() => setIsPaused(true)}
         onResume={() => setIsPaused(false)}
         onStop={() => setExitOpen(false)}
