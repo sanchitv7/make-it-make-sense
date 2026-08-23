@@ -34,6 +34,110 @@ interface TopBarProps {
 const signOutClassName =
   "inline-flex items-center justify-center min-h-8 px-3 font-[family:var(--font-body)] text-xs text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--border-active)] cursor-pointer transition-colors";
 
+function formatElapsed(seconds: number): string {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return [hrs, mins, secs].map((v) => v.toString().padStart(2, "0")).join(":");
+}
+
+function LiveStatus({
+  isConnected,
+  isPaused,
+  elapsed,
+}: {
+  isConnected: boolean;
+  isPaused: boolean;
+  elapsed: number;
+}) {
+  return (
+    <div className="flex items-center gap-3 font-[family:var(--font-mono)] tabular-nums">
+      <AnimatePresence mode="wait">
+        {isConnected ? (
+          <motion.div
+            key="connected"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            className="flex items-center gap-3 text-xs font-bold md:text-sm"
+          >
+            <div className="flex items-center gap-1.5">
+              <motion.div
+                animate={isPaused ? { opacity: 1 } : { opacity: [1, 0.4, 1] }}
+                transition={
+                  isPaused
+                    ? { duration: 0 }
+                    : { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
+                }
+                className="flex items-center justify-center"
+              >
+                <Radio
+                  size={12}
+                  className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}
+                />
+              </motion.div>
+              <span className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}>
+                {isPaused ? "PAUSED" : "LIVE"}
+              </span>
+            </div>
+            <span className="inline-block w-[5.5ch] border-l border-[var(--border-subtle)] pl-3 text-[var(--text-primary)]">
+              {formatElapsed(elapsed)}
+            </span>
+          </motion.div>
+        ) : (
+          <motion.span
+            key="offline"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-xs font-bold tracking-widest text-[var(--text-muted)] uppercase"
+          >
+            OFFLINE
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function SessionControls({
+  isConnected,
+  isPaused,
+  onPause,
+  onResume,
+  onStop,
+}: {
+  isConnected: boolean;
+  isPaused: boolean;
+  onPause: () => void;
+  onResume: () => void;
+  onStop: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 md:border-l md:border-[var(--border-active)] md:pl-4">
+      <motion.button
+        whileTap={{ scale: 0.98 }}
+        onClick={isPaused ? onResume : onPause}
+        disabled={!isConnected}
+        className="flex h-8 w-8 cursor-pointer items-center justify-center border border-[var(--border-active)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--text-primary)] hover:text-[var(--bg-card)] disabled:cursor-not-allowed disabled:opacity-30"
+        aria-label={isPaused ? "Resume" : "Pause"}
+        style={{ borderRadius: 0 }}
+      >
+        {isPaused ? <Play size={16} strokeWidth={2} /> : <Pause size={16} strokeWidth={2} />}
+      </motion.button>
+      <motion.button
+        whileTap={{ scale: 0.98 }}
+        onClick={onStop}
+        className="flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-[family:var(--font-mono)] tracking-widest text-white uppercase transition-opacity hover:opacity-80"
+        aria-label="End Session"
+        style={{ borderRadius: 0, backgroundColor: "#B91C1C" }}
+      >
+        <Square size={14} strokeWidth={2} />
+        <span>END</span>
+      </motion.button>
+    </div>
+  );
+}
+
 export function TopBar({
   isConnected,
   isPaused,
@@ -64,13 +168,6 @@ export function TopBar({
     }
   }, [isConnected]);
 
-  const formatTime = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return [hrs, mins, secs].map((v) => v.toString().padStart(2, "0")).join(":");
-  };
-
   const hasVerdicts = Object.values(verdictCounts).some((count) => count > 0);
 
   return (
@@ -78,89 +175,44 @@ export function TopBar({
       className="app-header-frost sticky top-0 z-[60] w-full"
       style={{ borderRadius: 0, borderTop: "6px solid var(--border-active)" }}
     >
-      <div className="flex items-center justify-between px-4 pb-3 md:px-6">
-        <div className="flex items-baseline overflow-hidden">
-          <BrandTitle onClick={onTitleClick} />
+      <div className="px-4 pb-3 md:px-6">
+        <div className="flex items-center justify-between">
+          <div className="flex min-w-0 items-baseline overflow-hidden">
+            <BrandTitle onClick={onTitleClick} />
+          </div>
+
+          <div className="flex shrink-0 items-center gap-4 md:gap-8">
+            {user ? (
+              <div className="flex items-center gap-3">
+                <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
+                <button type="button" onClick={onSignOut} className={signOutClassName}>
+                  Sign out
+                </button>
+              </div>
+            ) : null}
+
+            <div className="hidden items-center gap-8 md:flex">
+              <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
+              <SessionControls
+                isConnected={isConnected}
+                isPaused={isPaused}
+                onPause={onPause}
+                onResume={onResume}
+                onStop={onStop}
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4 md:gap-8">
-          {user ? (
-            <div className="flex items-center gap-3">
-              <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
-              <button type="button" onClick={onSignOut} className={signOutClassName}>
-                Sign out
-              </button>
-            </div>
-          ) : null}
-
-          <div className="flex items-center gap-3 font-[family:var(--font-mono)] tabular-nums">
-            <AnimatePresence mode="wait">
-              {isConnected ? (
-                <motion.div
-                  key="connected"
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="flex items-center gap-3 text-xs font-bold md:text-sm"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <motion.div
-                      animate={isPaused ? { opacity: 1 } : { opacity: [1, 0.4, 1] }}
-                      transition={
-                        isPaused
-                          ? { duration: 0 }
-                          : { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
-                      }
-                      className="flex items-center justify-center"
-                    >
-                      <Radio
-                        size={12}
-                        className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}
-                      />
-                    </motion.div>
-                    <span className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}>
-                      {isPaused ? "PAUSED" : "LIVE"}
-                    </span>
-                  </div>
-                  <span className="inline-block w-[5.5ch] border-l border-[var(--border-subtle)] pl-3 text-[var(--text-primary)]">
-                    {formatTime(elapsed)}
-                  </span>
-                </motion.div>
-              ) : (
-                <motion.span
-                  key="offline"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-xs font-bold tracking-widest text-[var(--text-muted)] uppercase"
-                >
-                  OFFLINE
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="flex items-center gap-1 border-l border-[var(--border-active)] pl-4">
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={isPaused ? onResume : onPause}
-              disabled={!isConnected}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center border border-[var(--border-active)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--text-primary)] hover:text-[var(--bg-card)] disabled:cursor-not-allowed disabled:opacity-30"
-              aria-label={isPaused ? "Resume" : "Pause"}
-              style={{ borderRadius: 0 }}
-            >
-              {isPaused ? <Play size={16} strokeWidth={2} /> : <Pause size={16} strokeWidth={2} />}
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={onStop}
-              className="flex h-8 cursor-pointer items-center gap-1.5 px-3 text-xs font-[family:var(--font-mono)] tracking-widest text-white uppercase transition-opacity hover:opacity-80"
-              aria-label="End Session"
-              style={{ borderRadius: 0, backgroundColor: "#B91C1C" }}
-            >
-              <Square size={14} strokeWidth={2} />
-              <span>END</span>
-            </motion.button>
-          </div>
+        <div className="mt-2 flex items-center justify-between md:hidden">
+          <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
+          <SessionControls
+            isConnected={isConnected}
+            isPaused={isPaused}
+            onPause={onPause}
+            onResume={onResume}
+            onStop={onStop}
+          />
         </div>
       </div>
 
