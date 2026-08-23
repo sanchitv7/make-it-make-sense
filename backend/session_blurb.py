@@ -15,6 +15,12 @@ from prompts import SESSION_TITLE_BLURB_PROMPT
 
 SESSION_BLURB_MODEL = "gemini-3.1-flash-lite"
 
+# Cheap models often ignore "don't start with Fact-Checking"; strip it if they do.
+_TITLE_PREFIX_RE = re.compile(
+    r"^(?:fact[-\s]?checking|fact[-\s]?check|checking)\s*[:\-–—]?\s*",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True)
 class SessionTitleBlurb:
@@ -72,6 +78,11 @@ async def generate_session_title_blurb(
     return _parse_title_blurb(raw)
 
 
+def _strip_title_prefix(title: str) -> str:
+    """Remove a leading Fact-Checking / Fact Check / Checking label from a title."""
+    return _TITLE_PREFIX_RE.sub("", title).strip()
+
+
 def _parse_title_blurb(raw: str) -> SessionTitleBlurb | None:
     matches = list(re.finditer(r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}", raw, re.DOTALL))
     if not matches:
@@ -81,7 +92,7 @@ def _parse_title_blurb(raw: str) -> SessionTitleBlurb | None:
     except (json.JSONDecodeError, ValueError, IndexError):
         return None
 
-    title = (data.get("title") or "").strip()
+    title = _strip_title_prefix((data.get("title") or "").strip())
     blurb = (data.get("blurb") or "").strip()
     if not title or not blurb:
         return None
