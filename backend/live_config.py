@@ -1,9 +1,8 @@
 """Gemini Live session config used by /ws/live.
 
-Server-side automatic activity detection must stay enabled unless the
-browser reliably sends activity_start / activity_end. Disabling it without
-working client VAD causes silent claim-detection failures (audio streams
-with no turn boundaries, so report_claim never fires).
+Automatic server VAD is disabled. The browser owns turn boundaries via
+Silero (activity_start / activity_end). Gemini ignores client activity
+signals unless auto-VAD is disabled.
 """
 
 from google.genai import types
@@ -38,17 +37,14 @@ REPORT_CLAIM_TOOL = types.Tool(
 
 
 def build_live_connect_config(system_instruction: str) -> types.LiveConnectConfig:
-    """Build LiveConnectConfig with server VAD and report_claim tool."""
+    """Build LiveConnectConfig with client Silero VAD and report_claim tool."""
     return types.LiveConnectConfig(
         response_modalities=[types.Modality.AUDIO],
         system_instruction=system_instruction,
         input_audio_transcription=types.AudioTranscriptionConfig(),
         realtime_input_config=types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(
-                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_HIGH,
-                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
-                prefix_padding_ms=20,
-                silence_duration_ms=400,
+                disabled=True,
             ),
             activity_handling=types.ActivityHandling.NO_INTERRUPTION,
             turn_coverage=types.TurnCoverage.TURN_INCLUDES_ALL_INPUT,
