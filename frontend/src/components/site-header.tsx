@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { BrandTitle } from "@/components/brand-title";
 import { AccountChip } from "@/components/account-chip";
 import { useAuth } from "@/components/auth-provider";
@@ -15,8 +16,17 @@ interface SiteHeaderProps {
 const authControlClassName =
   "inline-flex items-center justify-center min-h-10 min-w-[5.5rem] px-3 font-[family:var(--font-body)] text-sm text-[var(--text-primary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--border-active)] cursor-pointer transition-colors";
 
+const authPlaceholder = <div className="min-h-10 min-w-[5.5rem]" aria-hidden="true" />;
+
 export function SiteHeader({ onSignInClick, showBrandTitle = true }: SiteHeaderProps) {
   const { user, loading, signOut, accessToken } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const authReady = mounted && !loading;
 
   return (
     <header
@@ -39,8 +49,8 @@ export function SiteHeader({ onSignInClick, showBrandTitle = true }: SiteHeaderP
         ) : null}
 
         <div className="flex items-center gap-4">
-          {loading ? (
-            <div className="min-h-10 min-w-[5.5rem]" aria-hidden="true" />
+          {!authReady ? (
+            authPlaceholder
           ) : user ? (
             <>
               <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />

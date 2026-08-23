@@ -12,8 +12,15 @@ export default function Home() {
   const [authOpen, setAuthOpen] = useState(false);
   const [pendingBegin, setPendingBegin] = useState(false);
   const [showHeaderBrand, setShowHeaderBrand] = useState(false);
+  const [scrollReady, setScrollReady] = useState(false);
 
   useEffect(() => {
+    setScrollReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!scrollReady) return;
+
     const headline = document.querySelector("#splash-hero h1");
     if (!headline) return;
 
@@ -26,7 +33,7 @@ export default function Home() {
 
     observer.observe(headline);
     return () => observer.disconnect();
-  }, []);
+  }, [scrollReady]);
 
   const scrollToSetup = () => {
     document.getElementById("setup-section")?.scrollIntoView({ behavior: "smooth" });
