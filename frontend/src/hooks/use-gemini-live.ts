@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { DetectedClaim, ContextPreset } from "@/types";
 import { backendUrl } from "@/lib/api";
+import { createSileroVad, type SileroVadEvent, type SileroVadHandle } from "@/lib/silero-vad";
 
 const RECONNECT_BEFORE_MS = 13.5 * 60 * 1000;
 const PCM_CHUNK_SAMPLES = 1024;
@@ -35,6 +36,9 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletRef = useRef<AudioWorkletNode | null>(null);
+  const sileroVadRef = useRef<SileroVadHandle | null>(null);
+  const streamingRef = useRef(false);
+  const turnOpenRef = useRef(false);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stoppedRef = useRef(true);
   const presetRef = useRef(preset);
@@ -53,11 +57,65 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     accessTokenRef.current = accessToken;
   }, [accessToken]);
 
+  async function teardownSileroVad() {
+    const vad = sileroVadRef.current;
+    sileroVadRef.current = null;
+    if (!vad) return;
+    try {
+      await vad.destroy();
+    } catch (err) {
+      console.error("[Live] Silero VAD destroy error:", err);
+    }
+  }
+
   function teardownAudio() {
+    streamingRef.current = false;
+    void teardownSileroVad();
     workletRef.current?.disconnect();
     workletRef.current = null;
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
+  }
+
+  function sendActivity(ws: WebSocket, event: SileroVadEvent) {
+    if (ws.readyState !== WebSocket.OPEN) return;
+    switch (event) {
+      case "speech_start":
+        if (turnOpenRef.current) return;
+        ws.send(JSON.stringify({ type: "activity_start" }));
+        turnOpenRef.current = true;
+        return;
+      case "speech_end":
+        if (!turnOpenRef.current) return;
+        ws.send(JSON.stringify({ type: "activity_end" }));
+        turnOpenRef.current = false;
+        return;
+      default: {
+        const _exhaustive: never = event;
+        return _exhaustive;
+      }
+    }
+  }
+
+  function onSileroEvent(ws: WebSocket, event: SileroVadEvent) {
+    console.log("[Live] Silero", event);
+    sendActivity(ws, event);
+    if (event === "speech_end" && streamingRef.current && !stoppedRef.current) {
+      sendActivity(ws, "speech_start");
+    }
+  }
+
+  async function startSileroVad(ws: WebSocket, stream: MediaStream) {
+    await teardownSileroVad();
+    const vad = await createSileroVad({
+      stream,
+      onEvent: (event) => {
+        onSileroEvent(ws, event);
+      },
+    });
+    sileroVadRef.current = vad;
+    await vad.start();
+    console.log("[Live] Silero VAD started");
   }
 
   /** Append text to the current open text segment, or create one. */
@@ -149,6 +207,15 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     source.connect(node);
     // Do not connect to destination — avoids feedback when monitoring speakers.
     console.log("[Live] Audio streaming started");
+
+    streamingRef.current = true;
+    try {
+      await startSileroVad(ws, stream);
+    } catch (err) {
+      console.error("[Live] Silero VAD start error:", err);
+      streamingRef.current = false;
+      await teardownSileroVad();
+    }
   }
 
   async function doConnect() {
@@ -260,6 +327,7 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
 
       ws.onclose = (e) => {
         console.log("[Live] WS closed", e.code, e.reason);
+        turnOpenRef.current = false;
         teardownAudio();
         setIsConnected(false);
         if (!stoppedRef.current) {

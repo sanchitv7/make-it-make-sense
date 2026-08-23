@@ -6,7 +6,14 @@ export interface SpeechFlushState {
   speechStartedAtMs: number | null;
 }
 
-export const DEFAULT_MAX_SPEECH_MS = 8000;
+/** Force a turn during continuous speech so report_claim can fire without a pause. */
+export const DEFAULT_MAX_SPEECH_MS = 2500;
+
+export const SILERO_POSITIVE_SPEECH_THRESHOLD = 0.3;
+export const SILERO_NEGATIVE_SPEECH_THRESHOLD = 0.15;
+export const SILERO_REDEMPTION_MS = 250;
+export const SILERO_MIN_SPEECH_MS = 250;
+export const SILERO_PRE_SPEECH_PAD_MS = 300;
 
 /**
  * Pure helper: if speech has been continuous longer than maxSpeechMs,
@@ -37,6 +44,14 @@ export function applySpeechEnd(): SpeechFlushState {
   return { speaking: false, speechStartedAtMs: null };
 }
 
+/** Open a turn as soon as Silero starts listening — do not wait for onSpeechStart. */
+export function beginListening(nowMs: number): { event: SileroVadEvent; state: SpeechFlushState } {
+  return {
+    event: "speech_start",
+    state: applySpeechStart({ speaking: false, speechStartedAtMs: null }, nowMs),
+  };
+}
+
 export interface SileroVadHandle {
   start: () => Promise<void>;
   pause: () => Promise<void>;
@@ -54,6 +69,8 @@ export interface CreateSileroVadOptions {
 /**
  * Start Silero MicVAD on an existing mic stream (does not open a second mic).
  * Emits speech_start / speech_end for Gemini activity signals.
+ *
+ * Dynamic import: @ricky0123/vad-web pulls ONNX/WASM and must not load at SSR.
  */
 export async function createSileroVad(options: CreateSileroVadOptions): Promise<SileroVadHandle> {
   const { MicVAD } = await import("@ricky0123/vad-web");
@@ -87,11 +104,11 @@ export async function createSileroVad(options: CreateSileroVadOptions): Promise<
 
   const micVad = await MicVAD.new({
     model: "v5",
-    positiveSpeechThreshold: 0.4,
-    negativeSpeechThreshold: 0.25,
-    redemptionMs: 400,
-    minSpeechMs: 250,
-    preSpeechPadMs: 300,
+    positiveSpeechThreshold: SILERO_POSITIVE_SPEECH_THRESHOLD,
+    negativeSpeechThreshold: SILERO_NEGATIVE_SPEECH_THRESHOLD,
+    redemptionMs: SILERO_REDEMPTION_MS,
+    minSpeechMs: SILERO_MIN_SPEECH_MS,
+    preSpeechPadMs: SILERO_PRE_SPEECH_PAD_MS,
     baseAssetPath: "/vad/",
     onnxWASMBasePath: "/vad/",
     startOnLoad: false,
@@ -101,8 +118,11 @@ export async function createSileroVad(options: CreateSileroVadOptions): Promise<
     },
     resumeStream: async () => stream,
     onSpeechStart: () => {
+      const alreadySpeaking = flushState.speaking;
       flushState = applySpeechStart(flushState, now());
-      emit("speech_start");
+      if (!alreadySpeaking) {
+        emit("speech_start");
+      }
     },
     onSpeechEnd: () => {
       flushState = applySpeechEnd();
@@ -119,8 +139,11 @@ export async function createSileroVad(options: CreateSileroVadOptions): Promise<
 
   return {
     start: async () => {
-      await micVad.start();
+      const opened = beginListening(now());
+      flushState = opened.state;
+      emit(opened.event);
       startFlushTimer();
+      await micVad.start();
     },
     pause: async () => {
       clearFlushTimer();

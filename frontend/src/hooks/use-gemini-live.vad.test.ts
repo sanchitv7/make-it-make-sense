@@ -1,7 +1,6 @@
 /**
- * Regression: client Silero activity signaling must stay unwired until it
- * reliably sends activity_start/end. With Gemini auto-VAD disabled and no
- * client signals, claims stop being detected in production.
+ * Regression: Silero is the only VAD. Every Gemini turn must come from
+ * Silero activity_start / activity_end. No timer VAD and no server-VAD fallback.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -14,13 +13,20 @@ const hookSource = readFileSync(
 );
 
 describe("use-gemini-live VAD wiring", () => {
-  it("does not import Silero client VAD", () => {
-    expect(hookSource).not.toMatch(/silero-vad/);
-    expect(hookSource).not.toMatch(/createSileroVad/);
+  it("imports Silero client VAD", () => {
+    expect(hookSource).toContain('from "@/lib/silero-vad"');
+    expect(hookSource).toMatch(/createSileroVad/);
   });
 
-  it("does not send client activity_start / activity_end", () => {
-    expect(hookSource).not.toMatch(/activity_start/);
-    expect(hookSource).not.toMatch(/activity_end/);
+  it("sends activity_start / activity_end from Silero events", () => {
+    expect(hookSource).toMatch(/activity_start/);
+    expect(hookSource).toMatch(/activity_end/);
+    expect(hookSource).toMatch(/onSileroEvent/);
+  });
+
+  it("does not start a timer or server VAD fallback", () => {
+    expect(hookSource).not.toMatch(/backupFlush/);
+    expect(hookSource).not.toMatch(/startBackupFlush/);
+    expect(hookSource).not.toMatch(/server.?VAD/i);
   });
 });
