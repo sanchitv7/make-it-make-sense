@@ -115,7 +115,10 @@ async def live_ws(
         input_audio_transcription=types.AudioTranscriptionConfig(),
         realtime_input_config=types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(
-                disabled=True,
+                start_of_speech_sensitivity=types.StartSensitivity.START_SENSITIVITY_HIGH,
+                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
+                prefix_padding_ms=20,
+                silence_duration_ms=400,
             ),
             activity_handling=types.ActivityHandling.NO_INTERRUPTION,
             turn_coverage=types.TurnCoverage.TURN_INCLUDES_ALL_INPUT,
