@@ -14,14 +14,16 @@ REPORT_CLAIM_TOOL = types.Tool(
             name="report_claim",
             description="Report a verifiable factual claim heard in the audio",
             parameters=types.Schema(
-                type="OBJECT",
+                type=types.Type.OBJECT,
                 properties={
-                    "claim_text": types.Schema(type="STRING", description="The claim verbatim"),
+                    "claim_text": types.Schema(
+                        type=types.Type.STRING, description="The claim verbatim"
+                    ),
                     "timestamp_seconds": types.Schema(
-                        type="INTEGER", description="Seconds since session start"
+                        type=types.Type.INTEGER, description="Seconds since session start"
                     ),
                     "context": types.Schema(
-                        type="STRING",
+                        type=types.Type.STRING,
                         description=(
                             "1-2 surrounding sentences providing context for the claim "
                             "(who is speaking, what they were discussing)"
@@ -38,7 +40,7 @@ REPORT_CLAIM_TOOL = types.Tool(
 def build_live_connect_config(system_instruction: str) -> types.LiveConnectConfig:
     """Build LiveConnectConfig with server VAD and report_claim tool."""
     return types.LiveConnectConfig(
-        response_modalities=["AUDIO"],
+        response_modalities=[types.Modality.AUDIO],
         system_instruction=system_instruction,
         input_audio_transcription=types.AudioTranscriptionConfig(),
         realtime_input_config=types.RealtimeInputConfig(

@@ -28,7 +28,7 @@ fi
 run "backend ruff" bash -c "cd backend && \"$BACKEND_PYTHON\" -m ruff check . && \"$BACKEND_PYTHON\" -m ruff format --check ."
 run "backend mypy" bash -c "cd backend && \"$BACKEND_PYTHON\" -m mypy ."
 run "backend pytest" bash -c "cd backend && \"$BACKEND_PYTHON\" -m pytest tests -q"
-run "backend import-smoke" bash -c "cd backend && \"$BACKEND_PYTHON\" -c 'import main; import fact_check; import source_filter; import models; import prompts; import supabase_client'"
+run "backend import-smoke" bash -c "cd backend && \"$BACKEND_PYTHON\" -c 'import main; import live_config; import fact_check; import source_filter; import models; import prompts; import supabase_client'"
 
 run "frontend format" bash -c "cd frontend && npm run format:check"
 run "frontend lint" bash -c "cd frontend && npm run lint"
