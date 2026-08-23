@@ -41,17 +41,17 @@ function formatElapsed(seconds: number): string {
   return [hrs, mins, secs].map((v) => v.toString().padStart(2, "0")).join(":");
 }
 
-function LiveStatus({
-  isConnected,
-  isPaused,
-  elapsed,
-}: {
-  isConnected: boolean;
-  isPaused: boolean;
-  elapsed: number;
-}) {
+function ElapsedTime({ elapsed }: { elapsed: number }) {
   return (
-    <div className="flex items-center gap-3 font-[family:var(--font-mono)] tabular-nums">
+    <span className="inline-block w-[5.5ch] text-xs font-[family:var(--font-mono)] font-bold text-[var(--text-primary)] tabular-nums md:text-sm">
+      {formatElapsed(elapsed)}
+    </span>
+  );
+}
+
+function LiveBadge({ isConnected, isPaused }: { isConnected: boolean; isPaused: boolean }) {
+  return (
+    <div className="flex items-center font-[family:var(--font-mono)] tabular-nums">
       <AnimatePresence mode="wait">
         {isConnected ? (
           <motion.div
@@ -59,29 +59,22 @@ function LiveStatus({
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
-            className="flex items-center gap-3 text-xs font-bold md:text-sm"
+            className="flex items-center gap-1.5 text-xs font-bold md:text-sm"
           >
-            <div className="flex items-center gap-1.5">
-              <motion.div
-                animate={isPaused ? { opacity: 1 } : { opacity: [1, 0.4, 1] }}
-                transition={
-                  isPaused
-                    ? { duration: 0 }
-                    : { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
-                }
-                className="flex items-center justify-center"
-              >
-                <Radio
-                  size={12}
-                  className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}
-                />
-              </motion.div>
-              <span className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}>
-                {isPaused ? "PAUSED" : "LIVE"}
-              </span>
-            </div>
-            <span className="inline-block w-[5.5ch] border-l border-[var(--border-subtle)] pl-3 text-[var(--text-primary)]">
-              {formatElapsed(elapsed)}
+            <motion.div
+              animate={isPaused ? { opacity: 1 } : { opacity: [1, 0.4, 1] }}
+              transition={
+                isPaused ? { duration: 0 } : { repeat: Infinity, duration: 1.5, ease: "easeInOut" }
+              }
+              className="flex items-center justify-center"
+            >
+              <Radio
+                size={12}
+                className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}
+              />
+            </motion.div>
+            <span className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}>
+              {isPaused ? "PAUSED" : "LIVE"}
             </span>
           </motion.div>
         ) : (
@@ -95,6 +88,27 @@ function LiveStatus({
           </motion.span>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function LiveStatus({
+  isConnected,
+  isPaused,
+  elapsed,
+}: {
+  isConnected: boolean;
+  isPaused: boolean;
+  elapsed: number;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <LiveBadge isConnected={isConnected} isPaused={isPaused} />
+      {isConnected ? (
+        <span className="border-l border-[var(--border-subtle)] pl-3">
+          <ElapsedTime elapsed={elapsed} />
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -205,14 +219,17 @@ export function TopBar({
         </div>
 
         <div className="mt-2 flex items-center justify-between md:hidden">
-          <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
-          <SessionControls
-            isConnected={isConnected}
-            isPaused={isPaused}
-            onPause={onPause}
-            onResume={onResume}
-            onStop={onStop}
-          />
+          <ElapsedTime elapsed={elapsed} />
+          <div className="flex items-center gap-3">
+            <LiveBadge isConnected={isConnected} isPaused={isPaused} />
+            <SessionControls
+              isConnected={isConnected}
+              isPaused={isPaused}
+              onPause={onPause}
+              onResume={onResume}
+              onStop={onStop}
+            />
+          </div>
         </div>
       </div>
 
