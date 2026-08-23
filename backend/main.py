@@ -115,9 +115,9 @@ async def live_ws(
         input_audio_transcription=types.AudioTranscriptionConfig(),
         realtime_input_config=types.RealtimeInputConfig(
             automatic_activity_detection=types.AutomaticActivityDetection(
-                end_of_speech_sensitivity=types.EndSensitivity.END_SENSITIVITY_HIGH,
-                silence_duration_ms=200,
+                disabled=True,
             ),
+            activity_handling=types.ActivityHandling.NO_INTERRUPTION,
             turn_coverage=types.TurnCoverage.TURN_INCLUDES_ALL_INPUT,
         ),
         context_window_compression=types.ContextWindowCompressionConfig(
@@ -167,6 +167,10 @@ async def live_ws(
                                     mime_type="audio/pcm;rate=16000",
                                 )
                             )
+                        elif data.get("type") == "activity_start":
+                            await session.send_realtime_input(activity_start=types.ActivityStart())
+                        elif data.get("type") == "activity_end":
+                            await session.send_realtime_input(activity_end=types.ActivityEnd())
                         elif data.get("type") == "tool_response":
                             responses = [
                                 types.FunctionResponse(
