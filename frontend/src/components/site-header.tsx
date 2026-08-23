@@ -7,14 +7,12 @@ import { AccountChip } from "@/components/account-chip";
 import { useAuth } from "@/components/auth-provider";
 import { accountFullNameFromMetadata } from "@/lib/account-display-name";
 import { prefetchSessionList } from "@/lib/session-cache";
+import { headerAuthControlClassName } from "@/lib/header-auth-control";
 
 interface SiteHeaderProps {
   onSignInClick?: () => void;
   showBrandTitle?: boolean;
 }
-
-const authControlClassName =
-  "inline-flex items-center justify-center min-h-10 min-w-[5.5rem] px-3 font-[family:var(--font-body)] text-sm text-[var(--text-primary)] hover:text-[var(--text-primary)] border border-[var(--border-subtle)] hover:border-[var(--border-active)] cursor-pointer transition-colors";
 
 const authPlaceholder = <div className="min-h-10 min-w-[5.5rem]" aria-hidden="true" />;
 
@@ -57,7 +55,7 @@ export function SiteHeader({ onSignInClick, showBrandTitle = true }: SiteHeaderP
               <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
               <Link
                 href="/sessions"
-                className={authControlClassName}
+                className={headerAuthControlClassName}
                 onPointerEnter={() => {
                   if (accessToken) prefetchSessionList(accessToken);
                 }}
@@ -67,12 +65,16 @@ export function SiteHeader({ onSignInClick, showBrandTitle = true }: SiteHeaderP
               >
                 Sessions
               </Link>
-              <button type="button" onClick={() => void signOut()} className={authControlClassName}>
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className={headerAuthControlClassName}
+              >
                 Sign out
               </button>
             </>
           ) : onSignInClick ? (
-            <button type="button" onClick={onSignInClick} className={authControlClassName}>
+            <button type="button" onClick={onSignInClick} className={headerAuthControlClassName}>
               Sign in
             </button>
           ) : null}
