@@ -3,7 +3,7 @@
 import asyncio
 from datetime import UTC, datetime
 
-from session_blurb import generate_session_title_blurb
+from session_blurb import _parse_title_blurb, generate_session_title_blurb
 from session_cards import build_session_cards
 
 
@@ -101,3 +101,31 @@ def test_build_session_cards_respects_limit_newest_first() -> None:
 
     assert len(cards) == 1
     assert cards[0].id == "newer"
+
+
+def _title_blurb_json(title: str, blurb: str = "Earth has two moons — false.") -> str:
+    return f'{{"title": "{title}", "blurb": "{blurb}"}}'
+
+
+def test_parse_title_blurb_strips_fact_checking_prefix() -> None:
+    result = _parse_title_blurb(_title_blurb_json("Fact-Checking Planetary and Lunar Claims"))
+    assert result is not None
+    assert result.title == "Planetary and Lunar Claims"
+
+
+def test_parse_title_blurb_strips_fact_check_with_colon() -> None:
+    result = _parse_title_blurb(_title_blurb_json("fact check: India's courts"))
+    assert result is not None
+    assert result.title == "India's courts"
+
+
+def test_parse_title_blurb_leaves_plain_title_unchanged() -> None:
+    result = _parse_title_blurb(_title_blurb_json("Grocery prices"))
+    assert result is not None
+    assert result.title == "Grocery prices"
+    assert result.blurb == "Earth has two moons — false."
+
+
+def test_parse_title_blurb_rejects_empty_title_after_strip() -> None:
+    result = _parse_title_blurb(_title_blurb_json("Fact-Checking"))
+    assert result is None
