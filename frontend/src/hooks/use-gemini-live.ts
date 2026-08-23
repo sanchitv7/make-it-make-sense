@@ -4,17 +4,18 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { DetectedClaim, ContextPreset } from "@/types";
 import { backendUrl } from "@/lib/api";
-import { DEFAULT_ENERGY_VAD_CONFIG, EnergyVad } from "@/lib/vad-energy";
+import { createSileroVad, type SileroVadHandle } from "@/lib/silero-vad";
 
 const RECONNECT_BEFORE_MS = 13.5 * 60 * 1000;
 const PCM_CHUNK_SAMPLES = 1024;
 
+/** Far-field / speaker pickup: preserve quiet dialogue, boost levels. */
 const MIC_CONSTRAINTS: MediaTrackConstraints = {
   sampleRate: 16000,
   channelCount: 1,
   echoCancellation: false,
-  noiseSuppression: true,
-  autoGainControl: false,
+  noiseSuppression: false,
+  autoGainControl: true,
 };
 
 export type TranscriptSegment =
@@ -35,12 +36,12 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletRef = useRef<AudioWorkletNode | null>(null);
+  const sileroVadRef = useRef<SileroVadHandle | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stoppedRef = useRef(true);
   const presetRef = useRef(preset);
   const onClaimRef = useRef(onClaim);
   const accessTokenRef = useRef(accessToken);
-  const vadRef = useRef(new EnergyVad(DEFAULT_ENERGY_VAD_CONFIG));
   // ID of the current "open" text segment being streamed into
   const currentTextSegIdRef = useRef<string | null>(null);
 
@@ -54,7 +55,19 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     accessTokenRef.current = accessToken;
   }, [accessToken]);
 
+  async function teardownSileroVad() {
+    const vad = sileroVadRef.current;
+    sileroVadRef.current = null;
+    if (!vad) return;
+    try {
+      await vad.destroy();
+    } catch (err) {
+      console.error("[Live] Silero VAD destroy error:", err);
+    }
+  }
+
   function teardownAudio() {
+    void teardownSileroVad();
     workletRef.current?.disconnect();
     workletRef.current = null;
     audioCtxRef.current?.close();
@@ -67,10 +80,8 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     setSegments((prev) => {
       const last = prev[prev.length - 1];
       if (last?.type === "text" && last.id === currentTextSegIdRef.current) {
-        // Extend the last text segment
         return [...prev.slice(0, -1), { ...last, text: last.text + text }];
       }
-      // Start a new text segment
       const id = uuidv4();
       currentTextSegIdRef.current = id;
       return [...prev, { type: "text", id, text }];
@@ -87,45 +98,57 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
    * If nothing has been transcribed yet, add a claim segment with the claim_text.
    */
   function tagLastSegmentAsClaim(claimId: string, claimText: string) {
-    currentTextSegIdRef.current = null; // next text starts a new segment
+    currentTextSegIdRef.current = null;
     setSegments((prev) => {
       if (prev.length === 0) {
         return [{ type: "claim", id: uuidv4(), claimId, text: claimText }];
       }
       const last = prev[prev.length - 1];
       if (last.type === "text") {
-        // Replace the last text segment with a claim segment
         return [
           ...prev.slice(0, -1),
           { type: "claim", id: last.id, claimId, text: last.text || claimText },
         ];
       }
-      // Already a claim — append a new claim segment
       return [...prev, { type: "claim", id: uuidv4(), claimId, text: claimText }];
     });
   }
 
-  function resetVad() {
-    vadRef.current.reset();
+  function sendActivity(ws: WebSocket, event: "speech_start" | "speech_end") {
+    if (ws.readyState !== WebSocket.OPEN) return;
+    if (event === "speech_start") {
+      ws.send(JSON.stringify({ type: "activity_start" }));
+    } else {
+      ws.send(JSON.stringify({ type: "activity_end" }));
+    }
   }
 
-  function handleVadFrame(ws: WebSocket, rms: number, frameMs: number) {
-    const events = vadRef.current.processFrame(rms, frameMs);
-    for (const event of events) {
-      if (event === "speech_start") {
-        ws.send(JSON.stringify({ type: "activity_start" }));
-      } else if (event === "speech_end") {
-        ws.send(JSON.stringify({ type: "activity_end" }));
-      }
-    }
+  async function startSileroVad(ws: WebSocket, stream: MediaStream) {
+    await teardownSileroVad();
+    const vad = await createSileroVad({
+      stream,
+      onEvent: (event) => {
+        console.log("[Live] Silero", event);
+        sendActivity(ws, event);
+      },
+    });
+    sileroVadRef.current = vad;
+    await vad.start();
+    console.log("[Live] Silero VAD started");
   }
 
   async function startAudio(ws: WebSocket) {
     console.log("[Live] Starting audio");
+    const stream = mediaStreamRef.current;
+    if (!stream) {
+      console.error("[Live] No media stream for audio");
+      return;
+    }
+
     const audioCtx = new AudioContext({ sampleRate: 16000 });
     audioCtxRef.current = audioCtx;
 
-    const source = audioCtx.createMediaStreamSource(mediaStreamRef.current!);
+    const source = audioCtx.createMediaStreamSource(stream);
 
     const workletCode = `
       class PCMProcessor extends AudioWorkletProcessor {
@@ -134,22 +157,13 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
         process(inputs) {
           const ch = inputs[0]?.[0];
           if (!ch) return true;
-          let sumSq = 0;
           for (let s = 0; s < ch.length; s++) {
-            const sample = ch[s];
-            sumSq += sample * sample;
-            this._buf[this._i++] = Math.max(-32768, Math.min(32767, sample * 32768));
+            this._buf[this._i++] = Math.max(-32768, Math.min(32767, ch[s] * 32768));
             if (this._i >= this._buf.length) {
-              this.port.postMessage({
-                type: "audio",
-                pcm: this._buf.buffer.slice(0, this._i * 2),
-              });
+              this.port.postMessage(this._buf.buffer.slice(0, this._i * 2));
               this._i = 0;
             }
           }
-          const rms = Math.sqrt(sumSq / ch.length);
-          const frameMs = (ch.length / ${DEFAULT_ENERGY_VAD_CONFIG.sampleRate}) * 1000;
-          this.port.postMessage({ type: "rms", rms, frameMs });
           return true;
         }
       }
@@ -164,21 +178,20 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     const node = new AudioWorkletNode(audioCtx, "pcm-proc");
     workletRef.current = node;
 
-    node.port.onmessage = (
-      e: MessageEvent<{ type: string; pcm?: ArrayBuffer; rms?: number; frameMs?: number }>,
-    ) => {
+    node.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
       if (ws.readyState !== WebSocket.OPEN) return;
-      const msg = e.data;
-      if (msg.type === "audio" && msg.pcm) {
-        ws.send(JSON.stringify({ type: "audio", data: bufToBase64(msg.pcm) }));
-      } else if (msg.type === "rms" && msg.rms != null && msg.frameMs != null) {
-        handleVadFrame(ws, msg.rms, msg.frameMs);
-      }
+      ws.send(JSON.stringify({ type: "audio", data: bufToBase64(e.data) }));
     };
 
     source.connect(node);
-    node.connect(audioCtx.destination);
+    // Do not connect to destination — avoids feedback when monitoring speakers.
     console.log("[Live] Audio streaming started");
+
+    try {
+      await startSileroVad(ws, stream);
+    } catch (err) {
+      console.error("[Live] Silero VAD start error:", err);
+    }
   }
 
   async function doConnect() {
@@ -240,7 +253,6 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
             return;
           }
           console.log("[Live] Setup complete — starting audio");
-          resetVad();
           setIsConnected(true);
           await startAudio(ws);
           return;
@@ -316,7 +328,6 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
   const [isPaused, setIsPaused] = useState(false);
 
   const pause = useCallback(() => {
-    // Stop mic tracks so the browser releases the mic indicator
     mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
     mediaStreamRef.current = null;
     teardownAudio();
@@ -329,7 +340,6 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
       mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({
         audio: MIC_CONSTRAINTS,
       });
-      resetVad();
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         await startAudio(wsRef.current);
       }
@@ -343,7 +353,6 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
     stoppedRef.current = false;
     setSegments([]);
     currentTextSegIdRef.current = null;
-    resetVad();
     setIsConnected(false);
     setIsPaused(false);
     await doConnect();
