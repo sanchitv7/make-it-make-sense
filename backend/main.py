@@ -13,6 +13,7 @@ from google.genai import types
 
 import supabase_client
 from auth import require_user, verify_access_token
+from cors_origins import VERCEL_APP_ORIGIN_REGEX, parse_allowed_origins
 from fact_check import fact_check_claim, init_pool
 from live_config import build_live_connect_config
 from models import (
@@ -33,9 +34,7 @@ GEMINI_MODEL = "gemini-2.5-flash-native-audio-preview-12-2025"
 
 app = FastAPI(title="Make It Make Sense", version="0.1.0")
 
-_cors_origins = ["http://localhost:3000"]
-if _extra := os.environ.get("ALLOWED_ORIGINS"):
-    _cors_origins.extend(o.strip() for o in _extra.split(",") if o.strip())
+_cors_origins = parse_allowed_origins(os.environ.get("ALLOWED_ORIGINS"))
 
 
 @app.on_event("startup")
@@ -46,6 +45,7 @@ async def startup():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
+    allow_origin_regex=os.environ.get("ALLOWED_ORIGIN_REGEX", VERCEL_APP_ORIGIN_REGEX),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
