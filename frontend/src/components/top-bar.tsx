@@ -74,19 +74,11 @@ export function TopBar({
   const hasVerdicts = Object.values(verdictCounts).some((count) => count > 0);
 
   return (
-    <header className="sticky top-0 isolate z-50 w-full" style={{ borderRadius: 0 }}>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 border-b border-[var(--border-subtle)] backdrop-blur-2xl backdrop-saturate-150"
-        style={{
-          backgroundColor: "color-mix(in srgb, var(--bg-card) 88%, transparent)",
-          borderTop: "6px solid var(--border-active)",
-        }}
-      />
-      <div
-        className="relative flex items-center justify-between px-4 py-3 md:px-6"
-        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
-      >
+    <header
+      className="app-header-frost sticky top-0 z-[60] w-full"
+      style={{ borderRadius: 0, borderTop: "6px solid var(--border-active)" }}
+    >
+      <div className="flex items-center justify-between px-4 pb-3 md:px-6">
         <div className="flex items-baseline overflow-hidden">
           <BrandTitle onClick={onTitleClick} />
         </div>

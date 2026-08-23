@@ -26,6 +26,9 @@
   --accent-gold: #8b7332;
   --glow-red: rgba(139, 26, 43, 0.08);
   --card-shadow: 0 1px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.1);
+
+  /* Frosted header — same surface on splash, scroll, and session */
+  --header-frost: color-mix(in srgb, var(--bg-card) 92%, transparent);
 }
 
 /* Dark mode overrides */
@@ -47,6 +50,7 @@ html.dark {
   --accent-gold: #c9a84c;
   --glow-red: rgba(196, 30, 58, 0.15);
   --card-shadow: 0 2px 16px rgba(0, 0, 0, 0.4), 0 0 1px rgba(201, 168, 76, 0.08);
+  --header-frost: color-mix(in srgb, var(--bg-card) 92%, transparent);
 }
 
 html.dark .verdict-true {
@@ -97,6 +101,22 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-active);
+}
+
+/* Frosted app chrome — blur + tint on one surface, including iOS safe area */
+.app-header-frost {
+  background-color: var(--header-frost);
+  border-bottom: 1px solid var(--border-subtle);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  /* Always reserve notch/status space so scroll content cannot show through above the bar */
+  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-header-frost {
+    background-color: var(--bg-card);
+  }
 }
 
 /* Grain overlay */
