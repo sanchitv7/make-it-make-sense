@@ -31,6 +31,9 @@ function countsRecord(card: SessionCard): Record<Verdict, number> {
   };
 }
 
+const secondaryLinkClassName =
+  "inline-flex min-h-10 items-center border border-[var(--border-subtle)] px-4 text-xs font-[family:var(--font-mono)] tracking-widest text-[var(--text-primary)] uppercase transition-colors hover:border-[var(--border-active)]";
+
 export default function SessionsPage() {
   const { accessToken, loading: authLoading, user } = useAuth();
   const [sessions, setSessions] = useState<SessionCard[]>(() => getCachedSessionList() ?? []);
@@ -63,7 +66,7 @@ export default function SessionsPage() {
     <>
       <SiteHeader />
       <main
-        className="min-h-screen px-6 pt-28 pb-16 text-[var(--text-primary)] md:px-12"
+        className="min-h-screen px-6 pt-32 pb-16 text-[var(--text-primary)] md:px-12"
         style={{ backgroundColor: "var(--bg-primary)" }}
       >
         <div className="mx-auto w-full max-w-[1100px]">
@@ -84,10 +87,7 @@ export default function SessionsPage() {
               <p className="text-lg font-[family:var(--font-display)] text-[var(--text-secondary)] italic">
                 Sign in to view your sessions.
               </p>
-              <Link
-                href="/"
-                className="text-xs font-[family:var(--font-mono)] tracking-widest text-[var(--accent-blue)] uppercase underline"
-              >
+              <Link href="/" className={secondaryLinkClassName}>
                 Return Home
               </Link>
             </div>
@@ -100,10 +100,7 @@ export default function SessionsPage() {
               <p className="text-lg font-[family:var(--font-display)] text-[var(--text-secondary)] italic">
                 No sessions yet
               </p>
-              <Link
-                href="/"
-                className="inline-flex min-h-10 items-center border border-[var(--border-subtle)] px-4 text-xs font-[family:var(--font-mono)] tracking-widest text-[var(--text-primary)] uppercase hover:border-[var(--border-active)]"
-              >
+              <Link href="/" className={secondaryLinkClassName}>
                 Start a session
               </Link>
             </div>

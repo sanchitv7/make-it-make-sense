@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { BrandTitle } from "@/components/brand-title";
 import {
   CheckCircle,
   XCircle,
@@ -27,6 +28,7 @@ interface TopBarProps {
   onResume: () => void;
   onStop: () => void;
   onSignOut: () => void;
+  onTitleClick: () => void;
 }
 
 const signOutClassName =
@@ -41,6 +43,7 @@ export function TopBar({
   onResume,
   onStop,
   onSignOut,
+  onTitleClick,
 }: TopBarProps) {
   const { user } = useAuth();
   const [elapsed, setElapsed] = useState(0);
@@ -72,18 +75,12 @@ export function TopBar({
 
   return (
     <header
-      className="sticky top-0 z-50 w-full border-t-[6px] border-[var(--border-active)] bg-[var(--bg-card)]"
-      style={{ borderRadius: 0 }}
+      className="app-header-frost sticky top-0 z-[60] w-full"
+      style={{ borderRadius: 0, borderTop: "6px solid var(--border-active)" }}
     >
-      <div className="flex items-center justify-between px-4 py-3 md:px-6">
+      <div className="flex items-center justify-between px-4 pb-3 md:px-6">
         <div className="flex items-baseline overflow-hidden">
-          <h1
-            className="leading-none font-[family:var(--font-display)] font-black tracking-tighter whitespace-nowrap text-[var(--text-primary)] select-none"
-            style={{ fontSize: "clamp(1.8rem, 4.5vw, 3rem)", borderRadius: 0 }}
-          >
-            <span className="hidden sm:inline">MAKE IT MAKE SENSE</span>
-            <span className="sm:hidden">M·I·M·S</span>
-          </h1>
+          <BrandTitle onClick={onTitleClick} />
         </div>
 
         <div className="flex items-center gap-4 md:gap-8">

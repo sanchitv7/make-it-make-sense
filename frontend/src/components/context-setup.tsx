@@ -87,7 +87,7 @@ export function ContextSetup() {
 
   return (
     <div
-      className="flex min-h-screen w-full items-center justify-center px-6 py-20 md:px-12"
+      className="flex min-h-screen w-full items-center justify-center px-6 pt-28 pb-20 md:px-12 md:pt-32"
       style={{ backgroundColor: "var(--bg-primary)" }}
     >
       <motion.div

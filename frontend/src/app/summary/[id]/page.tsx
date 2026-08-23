@@ -16,6 +16,9 @@ import { PRESET_LABELS, VERDICT_CONFIG } from "@/lib/verdict-config";
 const BLURB_POLL_MS = 1500;
 const BLURB_POLL_MAX_MS = 15000;
 
+const secondaryLinkClassName =
+  "inline-flex min-h-10 items-center border border-[var(--border-subtle)] px-4 text-xs font-[family:var(--font-mono)] tracking-widest text-[var(--text-primary)] uppercase transition-colors hover:border-[var(--border-active)]";
+
 function formatTimestamp(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -111,7 +114,7 @@ export default function SummaryPage() {
     <>
       <SiteHeader />
       <main
-        className="min-h-screen px-6 pt-28 pb-16 text-[var(--text-primary)] md:px-12"
+        className="min-h-screen px-6 pt-32 pb-16 text-[var(--text-primary)] md:px-12"
         style={{ backgroundColor: "var(--bg-primary)" }}
       >
         <div className="mx-auto w-full max-w-[900px]">
@@ -120,10 +123,7 @@ export default function SummaryPage() {
               <p className="text-xl font-[family:var(--font-display)] text-[var(--text-secondary)]">
                 {signedOut ? "Sign in to view this session." : "Session not found."}
               </p>
-              <Link
-                href={signedOut ? "/" : "/sessions"}
-                className="text-xs font-[family:var(--font-mono)] tracking-widest text-[var(--accent-blue)] uppercase underline"
-              >
+              <Link href={signedOut ? "/" : "/sessions"} className={secondaryLinkClassName}>
                 {signedOut ? "Return Home" : "Back to Sessions"}
               </Link>
             </div>

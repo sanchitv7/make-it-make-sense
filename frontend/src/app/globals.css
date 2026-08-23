@@ -26,6 +26,9 @@
   --accent-gold: #8b7332;
   --glow-red: rgba(139, 26, 43, 0.08);
   --card-shadow: 0 1px 8px rgba(0, 0, 0, 0.06), 0 0 1px rgba(0, 0, 0, 0.1);
+
+  /* Header chrome — opaque so scrolled content never shows through */
+  --header-frost: var(--bg-card);
 }
 
 /* Dark mode overrides */
@@ -47,6 +50,7 @@ html.dark {
   --accent-gold: #c9a84c;
   --glow-red: rgba(196, 30, 58, 0.15);
   --card-shadow: 0 2px 16px rgba(0, 0, 0, 0.4), 0 0 1px rgba(201, 168, 76, 0.08);
+  --header-frost: var(--bg-card);
 }
 
 html.dark .verdict-true {
@@ -97,6 +101,18 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-active);
+}
+
+/* App header chrome — solid fill + safe-area coverage (iOS status bar / notch) */
+.app-header-frost {
+  background-color: var(--header-frost);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border-subtle) 65%, transparent);
+  /* Soft edge treatment; fill stays opaque so nothing bleeds through */
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  transform: translateZ(0);
 }
 
 /* Grain overlay */

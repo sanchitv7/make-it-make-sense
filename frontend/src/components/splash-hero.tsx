@@ -16,9 +16,10 @@ import {
 
 interface SplashHeroProps {
   onBeginClick: () => void;
+  sectionId?: string;
 }
 
-export function SplashHero({ onBeginClick }: SplashHeroProps) {
+export function SplashHero({ onBeginClick, sectionId = "splash-hero" }: SplashHeroProps) {
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
@@ -142,13 +143,13 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
 
   return (
     <motion.section
+      id={sectionId}
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)] px-6 py-20 md:px-12"
+      className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-[var(--bg-primary)] px-6 pt-28 pb-20 md:px-12 md:pt-32"
     >
       <div className="flex w-full max-w-[900px] flex-col items-start space-y-12">
-        {/* Headline */}
         <motion.h1
           className="w-full leading-none font-[family:var(--font-display)] font-bold tracking-tight text-[var(--text-primary)]"
           style={{ fontSize: "clamp(2.5rem, 8vw, 6rem)" }}
@@ -164,7 +165,6 @@ export function SplashHero({ onBeginClick }: SplashHeroProps) {
           ))}
         </motion.h1>
 
-        {/* Subtitle */}
         <motion.p
           variants={fadeUpVariants}
           className="max-w-2xl text-xl leading-relaxed font-[family:var(--font-body)] text-[var(--text-secondary)] md:text-2xl"
