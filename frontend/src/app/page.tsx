@@ -35,6 +35,11 @@ export default function Home() {
 
   useEffect(() => {
     setScrollReady(true);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("auth_error") === "confirm") {
+      setBeginError("That confirmation link is invalid or expired. Try creating an account again.");
+      window.history.replaceState({}, "", "/");
+    }
   }, []);
 
   useEffect(() => {

@@ -83,10 +83,10 @@ ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
 ### 2. Configure Supabase Auth
 
 1. Authentication → Providers → Email: enabled
-2. Turn **Confirm email** off for local/v1
+2. Turn **Confirm email** on (stops accounts from being created with unverified addresses)
 3. Authentication → Providers: enable **Anonymous sign-ins**
 4. Authentication → Providers: enable **Manual linking** (needed to convert an anonymous user to email/password)
-5. Authentication → URL configuration: add `http://localhost:3000/auth/reset` (and production URL) to redirect allow list
+5. Authentication → URL configuration: add `http://localhost:3000/auth/callback` and `http://localhost:3000/auth/reset` (and the matching production URLs) to the redirect allow list
 6. Copy **Project URL** and **anon key** (Settings → API)
 
 ### 3. Configure the backend
@@ -181,6 +181,7 @@ Open [http://localhost:3000](http://localhost:3000). **Begin** starts a 30-secon
 | `components/auth-provider.tsx` | Auth state + helpers |
 | `hooks/use-gemini-live.ts` | WebSocket + mic (passes JWT) |
 | `hooks/use-fact-check.ts` | Authenticated fact-check calls |
+| `app/auth/callback/route.ts` | PKCE exchange for confirm-email links |
 | `app/auth/reset/page.tsx` | Password recovery |
 | `app/sessions/page.tsx` | Past Sessions card board |
 

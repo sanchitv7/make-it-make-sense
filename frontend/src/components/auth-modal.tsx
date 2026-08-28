@@ -143,7 +143,11 @@ export function AuthModal({
           return;
         }
         if (pendingConfirmation) {
-          setInfo("Check your email to finish creating your account.");
+          setInfo(
+            intent === "convert"
+              ? "Check your email and open the confirmation link in this browser to keep this session."
+              : "Check your email to finish creating your account.",
+          );
           return;
         }
         onClose();

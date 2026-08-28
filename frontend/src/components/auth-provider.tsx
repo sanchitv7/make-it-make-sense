@@ -13,6 +13,11 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { isAnonymousAccount, isPermanentAccount } from "@/lib/account-kind";
+import {
+  clearPendingConvertPassword,
+  stashPendingConvertPassword,
+  takePendingConvertPassword,
+} from "@/lib/pending-convert-password";
 
 type AuthResult = { error: string | null; pendingConfirmation?: boolean };
 
@@ -32,12 +37,31 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function emailRedirectTo(): string {
+  return `${window.location.origin}/auth/callback`;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [supabase] = useState(() => createClient());
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const sessionRef = useRef<Session | null>(null);
   sessionRef.current = session;
+
+  const applyPendingConvertPassword = useCallback(
+    async (user: User | null | undefined) => {
+      if (!isPermanentAccount(user)) return;
+      const password = takePendingConvertPassword();
+      if (!password) return;
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        // Put it back so a later session refresh can retry once.
+        stashPendingConvertPassword(password);
+        console.error("[Auth] Failed to set password after email confirm:", error.message);
+      }
+    },
+    [supabase],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -46,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return;
       setSession(data.session);
       setLoading(false);
+      void applyPendingConvertPassword(data.session?.user);
     });
 
     const {
@@ -53,13 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       setLoading(false);
+      void applyPendingConvertPassword(nextSession?.user);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase, applyPendingConvertPassword]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
@@ -73,24 +99,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string, fullName: string) => {
       const current = sessionRef.current?.user;
       if (isAnonymousAccount(current)) {
-        const { data, error } = await supabase.auth.updateUser({
-          email,
-          password,
-          data: { full_name: fullName },
-        });
-        if (error) return { error: error.message };
+        // Confirm-email on: link email first, set password after the user verifies.
+        stashPendingConvertPassword(password);
+        const { data, error } = await supabase.auth.updateUser(
+          {
+            email,
+            data: { full_name: fullName },
+          },
+          { emailRedirectTo: emailRedirectTo() },
+        );
+        if (error) {
+          clearPendingConvertPassword();
+          return { error: error.message };
+        }
         return {
           error: null,
-          pendingConfirmation: Boolean(data.user?.is_anonymous),
+          pendingConfirmation: Boolean(data.user?.is_anonymous) || !data.user?.email_confirmed_at,
         };
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: fullName } },
+        options: {
+          data: { full_name: fullName },
+          emailRedirectTo: emailRedirectTo(),
+        },
       });
-      return { error: error?.message ?? null };
+      if (error) return { error: error.message };
+      return {
+        error: null,
+        pendingConfirmation: Boolean(data.user) && !data.session,
+      };
     },
     [supabase],
   );
@@ -102,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase]);
 
   const signOut = useCallback(async () => {
+    clearPendingConvertPassword();
     await supabase.auth.signOut();
   }, [supabase]);
 

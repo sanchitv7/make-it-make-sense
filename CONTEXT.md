@@ -51,6 +51,7 @@ Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no 
 ### Frontend (`frontend/`)
 
 - `src/app/page.tsx` — Home (splash + gated setup)
+- `src/app/auth/callback/route.ts` — PKCE exchange for confirm-email links
 - `src/app/auth/reset/page.tsx` — Password recovery
 - `src/app/session/[id]/page.tsx` — Live listening
 - `src/app/summary/[id]/page.tsx` — Session verdict report
@@ -59,6 +60,7 @@ Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no 
 - `src/lib/account-display-name.ts` — First-name label from Account `full_name`
 - `src/lib/trial.ts` — 30-second trial remaining-time helpers
 - `src/lib/account-kind.ts` — Anonymous vs permanent Account checks
+- `src/lib/pending-convert-password.ts` — Short-lived password stash while converting an Anonymous Account
 - `src/lib/supabase/` — Browser/server/middleware clients
 - `src/lib/api.ts` — Authenticated fetch helper
 - `src/hooks/use-gemini-live.ts` / `use-fact-check.ts`
@@ -70,7 +72,7 @@ Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no 
 3. Session page opens → `/ws/live` auth message (JWT + `session_id`) then proxies mic audio to Gemini Live. Anonymous Sessions are closed after 30s from `started_at`
 4. Each detected claim → `POST /api/fact-check` (JWT + ownership check)
 5. On stop (or trial expiry) → `PATCH /api/session/{id}` ends the Session and kicks off a one-shot title/blurb generation → verdict page
-6. Creating an email/password identity converts the Anonymous Account in place (`updateUser`) so the trial Session remains owned by the same `user_id`
+6. Creating an email identity converts the Anonymous Account in place (`updateUser`). Confirm email is on, so the password is set after they open the confirmation link. The trial Session stays on the same `user_id`.
 7. Past Sessions board → `GET /api/sessions` lists ended Sessions with Claims for a permanent Account
 
 ## API Routes
