@@ -171,9 +171,7 @@ export default function SummaryPage() {
 
               {showContent && (
                 <>
-                  {isAnonymous ? (
-                    <TrialConvertBanner onCreateAccount={() => setAuthOpen(true)} />
-                  ) : null}
+                  {isAnonymous ? <TrialConvertBanner /> : null}
                   <AnimatePresence>
                     {showBlurbBlock && (
                       <motion.div

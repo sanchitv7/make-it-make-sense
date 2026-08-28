@@ -26,7 +26,7 @@ def test_trial_remaining_decreases_with_wall_clock() -> None:
     start = datetime(2026, 8, 28, 12, 0, tzinfo=UTC)
     now = start + timedelta(seconds=12.5)
     left = trial_remaining_seconds(start, now=now)
-    assert left == 17.5
+    assert left == float(TRIAL_DURATION_SECONDS) - 12.5
 
 
 def test_trial_remaining_is_zero_after_duration() -> None:

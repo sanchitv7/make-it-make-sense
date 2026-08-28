@@ -9,7 +9,7 @@ A signed-in identity that owns listening Sessions. Permanent Accounts use email/
 _Avoid_: User (ambiguous), customer, profile
 
 **Anonymous Account**:
-A Supabase anonymous Auth user created silently on first Begin — no email. Owns at most one 30-second trial Session. Creating an email/password identity converts the same Auth user so the trial Session stays in history.
+A Supabase anonymous Auth user created silently on first Begin — no email. Owns at most one minute-long trial Session. Creating an email/password identity converts the same Auth user so the trial Session stays in history.
 _Avoid_: Guest token, unsigned session
 
 **Session**:
@@ -31,7 +31,7 @@ Browser ──mic──→ FastAPI /ws/live (JWT) ──→ Gemini Live API
   │──POST /api/fact-check (JWT)──→ Gemini 2.5 Flash + Google Search
 ```
 
-Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no email) and opens context setup. That Account may create one Session, capped at 30 seconds of wall-clock time from `started_at`. After the trial, they see The Verdict; the next Begin asks them to create a permanent Account (history, unlimited listen, copyable links). Signed-in permanent Accounts can open Past Sessions (`/sessions`) to reopen ended Sessions that have Claims.
+Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no email) and opens context setup. That Account may create one Session, capped at 60 seconds of wall-clock time from `started_at`. After the trial, they see The Verdict; the next Begin asks them to create a permanent Account (history, unlimited listen, copyable links). Signed-in permanent Accounts can open Past Sessions (`/sessions`) to reopen ended Sessions that have Claims.
 
 ## File Structure
 
@@ -39,7 +39,7 @@ Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no 
 
 - `main.py` — FastAPI app, CORS, JWT-gated routes, WebSocket proxy
 - `auth.py` — Supabase JWT verification (`Principal` includes `is_anonymous`)
-- `trial.py` — 30-second anonymous trial remaining-time + one-Session gate
+- `trial.py` — 60-second anonymous trial remaining-time + one-Session gate
 - `models.py` — Pydantic request/response models
 - `prompts.py` — System prompts per context preset + fact-check template
 - `fact_check.py` — Fact-check pipeline
@@ -58,7 +58,7 @@ Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no 
 - `src/app/sessions/page.tsx` — Past Sessions card board
 - `src/components/auth-provider.tsx` / `auth-modal.tsx` / `site-header.tsx` / `account-chip.tsx`
 - `src/lib/account-display-name.ts` — First-name label from Account `full_name`
-- `src/lib/trial.ts` — 30-second trial remaining-time helpers
+- `src/lib/trial.ts` — 60-second trial remaining-time helpers
 - `src/lib/account-kind.ts` — Anonymous vs permanent Account checks
 - `src/lib/pending-convert-password.ts` — Short-lived password stash while converting an Anonymous Account
 - `src/lib/supabase/` — Browser/server/middleware clients
@@ -69,7 +69,7 @@ Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no 
 
 1. Begin creates an Anonymous Account (`signInAnonymously`) unless a permanent Account is already signed in
 2. Account picks a context preset → `POST /api/session` (JWT) creates a Session with `user_id` (anonymous Accounts are limited to one)
-3. Session page opens → `/ws/live` auth message (JWT + `session_id`) then proxies mic audio to Gemini Live. Anonymous Sessions are closed after 30s from `started_at`
+3. Session page opens → `/ws/live` auth message (JWT + `session_id`) then proxies mic audio to Gemini Live. Anonymous Sessions are closed after 60s from `started_at`
 4. Each detected claim → `POST /api/fact-check` (JWT + ownership check)
 5. On stop (or trial expiry) → `PATCH /api/session/{id}` ends the Session and kicks off a one-shot title/blurb generation → verdict page
 6. Creating an email identity converts the Anonymous Account in place (`updateUser`). Confirm email is on, so the password is set after they open the confirmation link. The trial Session stays on the same `user_id`.
@@ -86,7 +86,7 @@ Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no 
 | GET | `/api/sessions` | JWT | List ended Sessions with Claims for Account |
 | GET | `/api/session/{id}` | JWT + ownership | Get Session + claims |
 | PATCH | `/api/session/{id}` | JWT + ownership | End Session (async title/blurb) |
-| WS | `/ws/live` | JWT first message | Live audio proxy (anonymous: 30s cap) |
+| WS | `/ws/live` | JWT first message | Live audio proxy (anonymous: 60s cap) |
 
 ## Env Vars
 

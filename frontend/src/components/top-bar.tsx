@@ -19,7 +19,6 @@ import { AccountChip } from "@/components/account-chip";
 import { useAuth } from "@/components/auth-provider";
 import { accountFullNameFromMetadata } from "@/lib/account-display-name";
 import { headerAuthControlClassName } from "@/lib/header-auth-control";
-import { formatTrialCountdown } from "@/lib/trial";
 
 interface TopBarProps {
   isConnected: boolean;
@@ -33,8 +32,6 @@ interface TopBarProps {
   onTitleClick: () => void;
   /** Preview-only account label so demos can show chrome without a live session. */
   accountFullName?: string;
-  /** When set, show a 30s trial countdown instead of elapsed time. */
-  trialRemainingSeconds?: number | null;
 }
 
 function AccountChrome({ fullName, onSignOut }: { fullName: string; onSignOut: () => void }) {
@@ -89,31 +86,17 @@ function LiveStatus({
   isConnected,
   isPaused,
   elapsed,
-  trialRemainingSeconds,
 }: {
   isConnected: boolean;
   isPaused: boolean;
   elapsed: number;
-  trialRemainingSeconds?: number | null;
 }) {
-  const showTrial = typeof trialRemainingSeconds === "number";
   return (
     <div className="flex items-center gap-3 font-[family:var(--font-mono)] tabular-nums">
       <LiveBadge isConnected={isConnected} isPaused={isPaused} />
       {isConnected ? (
         <span className="border-l border-[var(--border-subtle)] pl-3">
-          {showTrial ? (
-            <span className="inline-flex items-center gap-2">
-              <span className="hidden text-[10px] tracking-widest text-[var(--text-muted)] uppercase md:inline">
-                Preview
-              </span>
-              <span className="inline-block w-[4ch] text-xs font-[family:var(--font-mono)] font-bold text-[var(--text-primary)] tabular-nums md:text-sm">
-                {formatTrialCountdown(trialRemainingSeconds ?? 0)}
-              </span>
-            </span>
-          ) : (
-            <ElapsedTime elapsed={elapsed} />
-          )}
+          <ElapsedTime elapsed={elapsed} />
         </span>
       ) : null}
     </div>
@@ -170,7 +153,6 @@ export function TopBar({
   onSignOut,
   onTitleClick,
   accountFullName,
-  trialRemainingSeconds,
 }: TopBarProps) {
   const { user } = useAuth();
   const [elapsed, setElapsed] = useState(0);
@@ -208,12 +190,7 @@ export function TopBar({
           {accountName ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
         </div>
         <div className="flex items-center justify-between gap-3 px-4 pb-3">
-          <LiveStatus
-            isConnected={isConnected}
-            isPaused={isPaused}
-            elapsed={elapsed}
-            trialRemainingSeconds={trialRemainingSeconds}
-          />
+          <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
           <SessionControls
             isConnected={isConnected}
             isPaused={isPaused}
@@ -230,12 +207,7 @@ export function TopBar({
         </div>
         <div className="flex shrink-0 items-center gap-8">
           {accountName ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
-          <LiveStatus
-            isConnected={isConnected}
-            isPaused={isPaused}
-            elapsed={elapsed}
-            trialRemainingSeconds={trialRemainingSeconds}
-          />
+          <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
           <SessionControls
             isConnected={isConnected}
             isPaused={isPaused}

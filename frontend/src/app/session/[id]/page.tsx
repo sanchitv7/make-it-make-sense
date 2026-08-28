@@ -24,7 +24,6 @@ export default function SessionPage() {
   const [claims, setClaims] = useState<DetectedClaim[]>([]);
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [startedAt, setStartedAt] = useState<string | null>(null);
-  const [trialRemaining, setTrialRemaining] = useState<number | null>(null);
   const startedRef = useRef(false);
   const endingRef = useRef(false);
   const stopRef = useRef<() => void>(() => {});
@@ -128,14 +127,9 @@ export default function SessionPage() {
   }, [authLoading, user, accessToken, isAnonymous, sessionId, start, router, finishToSummary]);
 
   useEffect(() => {
-    if (!isAnonymous || !startedAt) {
-      setTrialRemaining(null);
-      return;
-    }
+    if (!isAnonymous || !startedAt) return;
     const tick = () => {
-      const left = trialRemainingSeconds(startedAt);
-      setTrialRemaining(left);
-      if (left <= 0) void finishToSummary();
+      if (trialRemainingSeconds(startedAt) <= 0) void finishToSummary();
     };
     tick();
     const id = window.setInterval(tick, 250);
@@ -203,7 +197,6 @@ export default function SessionPage() {
           onStop={() => void handleStop()}
           onSignOut={() => void handleSignOut()}
           onTitleClick={handleTitleClick}
-          trialRemainingSeconds={trialRemaining}
         />
       </div>
       <SessionExitDialog

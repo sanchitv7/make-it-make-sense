@@ -122,8 +122,7 @@ export function ContextSetup({ onTrialUsed }: ContextSetupProps) {
           </p>
           {isAnonymous ? (
             <p className="mt-3 text-sm font-[family:var(--font-body)] text-[var(--text-muted)]">
-              This preview listens for 30 seconds. Create an account after to keep going and save
-              sessions.
+              First listen is one minute. Create an account after to keep going and save sessions.
             </p>
           ) : null}
         </motion.header>

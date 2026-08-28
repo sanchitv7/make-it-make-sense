@@ -4,13 +4,13 @@ Real-time AI fact-checker that listens to live audio, detects factual claims, an
 
 ## What it does
 
-1. You tap Begin (no email required for the first 30-second preview)
+1. You tap Begin (no email required for the first one-minute preview)
 2. You pick a context preset (political speech, news broadcast, earnings call, podcast)
 3. The app listens via your microphone
 4. Gemini Live API transcribes the audio and flags factual claims in real time
 5. Each claim is immediately fact-checked using Gemini 2.5 Flash + Google Search
 6. Verdicts appear as cards: **TRUE**, **FALSE**, **MISLEADING**, or **UNVERIFIED**
-7. After the preview, create an account to keep past sessions, listen past 30 seconds, and copy a shareable verdict link
+7. After the preview, create an account to keep past sessions, listen longer, and copy a shareable verdict link
 
 Verdicts are forced to **UNVERIFIED** if no citation from a trusted domain (Reuters, BBC, `.gov`, etc.) is found — no source, no verdict.
 
@@ -135,7 +135,7 @@ cd backend && source .venv/bin/activate && uvicorn main:app --reload
 cd frontend && npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). **Begin** starts a 30-second preview without an email. After that, creating an account keeps the trial session and unlocks unlimited listening, Past Sessions, and copyable verdict links. **Sign in** is still in the header.
+Open [http://localhost:3000](http://localhost:3000). **Begin** starts a one-minute preview without an email. After that, creating an account keeps the trial session and unlocks unlimited listening, Past Sessions, and copyable verdict links. **Sign in** is still in the header.
 
 ## Contributing / quality gates
 

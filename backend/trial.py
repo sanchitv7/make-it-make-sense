@@ -1,10 +1,10 @@
-"""Anonymous listening trial: one Session, 30 seconds of wall-clock time."""
+"""Anonymous listening trial: one Session, 60 seconds of wall-clock time."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
-TRIAL_DURATION_SECONDS = 30
+TRIAL_DURATION_SECONDS = 60
 TRIAL_USED_DETAIL = "trial_used"
 TRIAL_EXPIRED_DETAIL = "trial_expired"
 
