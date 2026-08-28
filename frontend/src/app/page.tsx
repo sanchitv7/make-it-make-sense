@@ -7,6 +7,7 @@ import { AuthModal, type AuthIntent, type AuthMode } from "@/components/auth-mod
 import { SiteHeader } from "@/components/site-header";
 import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
+import { clearTrialVerdictAccess } from "@/lib/trial-verdict-access";
 import type { AccountStatus } from "@/types";
 
 function headerShouldSolidate(headline: Element | null, setup: Element | null): boolean {
@@ -67,6 +68,11 @@ export default function Home() {
 
   const canListen = hasAccount || (isAnonymous && trialUsed === false);
   const previewAlreadyUsed = Boolean(isAnonymous && trialUsed);
+
+  // Leaving The Verdict for home ends the one-time anonymous pass.
+  useEffect(() => {
+    if (previewAlreadyUsed) clearTrialVerdictAccess();
+  }, [previewAlreadyUsed]);
 
   useEffect(() => {
     if (!scrollReady) return;

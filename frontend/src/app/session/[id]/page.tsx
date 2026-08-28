@@ -10,6 +10,7 @@ import { SessionExitDialog } from "@/components/session-exit-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
 import { trialRemainingSeconds } from "@/lib/trial";
+import { markTrialVerdictAccess } from "@/lib/trial-verdict-access";
 import type { ContextPreset, DetectedClaim, SessionDetailResponse, Verdict } from "@/types";
 
 export default function SessionPage() {
@@ -76,8 +77,10 @@ export default function SessionPage() {
     if (endingRef.current) return;
     endingRef.current = true;
     await endSessionCleanup();
+    // One-time pass: anonymous visitors may see this Verdict now, not on a later return.
+    if (isAnonymous) markTrialVerdictAccess(sessionId);
     router.push(`/summary/${sessionId}`);
-  }, [endSessionCleanup, router, sessionId]);
+  }, [endSessionCleanup, isAnonymous, router, sessionId]);
 
   const { isConnected, isPaused, start, stop, pause, resume } = useGeminiLive({
     preset,
@@ -108,7 +111,8 @@ export default function SessionPage() {
         if (cancelled) return;
         setStartedAt(session.started_at);
         if (session.ended_at) {
-          router.replace(`/summary/${sessionId}`);
+          // Anonymous Accounts do not freeload an ended trial Verdict on revisit.
+          router.replace(isAnonymous ? "/" : `/summary/${sessionId}`);
           return;
         }
         if (isAnonymous && trialRemainingSeconds(session.started_at) <= 0) {
