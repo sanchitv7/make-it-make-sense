@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "deny": [
+      "Skill(superpowers:brainstorming)",
+      "Skill(brainstorming)"
+    ]
+  }
+}

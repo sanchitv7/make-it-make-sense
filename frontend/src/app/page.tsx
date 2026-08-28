@@ -138,9 +138,10 @@ export default function Home() {
     setPendingBegin(true);
     const { error } = await signInAnonymously();
     if (error) {
+      console.error("[Auth] Anonymous sign-in failed:", error);
       setPendingBegin(false);
-      setBeginError("Could not start a preview. Sign in to listen.");
-      openSignIn();
+      setBeginError("Preview isn’t available right now. Create an account to start listening.");
+      openConvert();
     }
   };
 
@@ -158,7 +159,11 @@ export default function Home() {
       <main>
         <SplashHero onBeginClick={() => void handleBeginClick()} />
         {beginError ? (
-          <p className="px-6 pb-4 text-sm font-[family:var(--font-body)] text-[var(--accent-red)] md:px-12">
+          <p
+            className="fixed bottom-6 left-1/2 z-[70] max-w-md -translate-x-1/2 px-4 py-3 text-center text-sm font-[family:var(--font-body)] text-white shadow-lg"
+            style={{ backgroundColor: "var(--accent-red)" }}
+            role="status"
+          >
             {beginError}
           </p>
         ) : null}
