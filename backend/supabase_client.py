@@ -86,6 +86,12 @@ def update_session_blurb(session_id: str, title: str, blurb: str) -> None:
     ).execute()
 
 
+def count_sessions_for_user(user_id: str) -> int:
+    """How many Sessions this Account has created (open or ended)."""
+    result = get_client().table("sessions").select("id").eq("user_id", user_id).limit(2).execute()
+    return len(result.data or [])
+
+
 def list_sessions_for_user(user_id: str, *, limit: int = 100) -> list:
     """Ended sessions with ≥1 claim for the Account, newest first."""
     sessions_result = (

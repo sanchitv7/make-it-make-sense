@@ -9,20 +9,25 @@ import { TopBar } from "@/components/top-bar";
 import { SessionExitDialog } from "@/components/session-exit-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
-import type { ContextPreset, DetectedClaim, Verdict } from "@/types";
+import { trialRemainingSeconds } from "@/lib/trial";
+import type { ContextPreset, DetectedClaim, SessionDetailResponse, Verdict } from "@/types";
 
 export default function SessionPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { accessToken, loading: authLoading, user, signOut } = useAuth();
+  const { accessToken, loading: authLoading, user, isAnonymous, signOut } = useAuth();
   const sessionId = params.id as string;
   const preset = (searchParams.get("preset") || "podcast") as ContextPreset;
   const contextDetail = searchParams.get("context") || undefined;
 
   const [claims, setClaims] = useState<DetectedClaim[]>([]);
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [trialRemaining, setTrialRemaining] = useState<number | null>(null);
   const startedRef = useRef(false);
+  const endingRef = useRef(false);
+  const stopRef = useRef<() => void>(() => {});
 
   const { verdicts, checkingIds, checkClaim } = useFactCheck({
     sessionId,
@@ -39,11 +44,52 @@ export default function SessionPage() {
     [checkClaim],
   );
 
+  const checkingIdsRef = useRef(checkingIds);
+  useEffect(() => {
+    checkingIdsRef.current = checkingIds;
+  }, [checkingIds]);
+
+  const accessTokenRef = useRef(accessToken);
+  useEffect(() => {
+    accessTokenRef.current = accessToken;
+  }, [accessToken]);
+
+  const endSessionCleanup = useCallback(async () => {
+    stopRef.current();
+    await new Promise<void>((resolve) => {
+      const poll = () => {
+        if (checkingIdsRef.current.size === 0) return resolve();
+        setTimeout(poll, 200);
+      };
+      poll();
+    });
+    const token = accessTokenRef.current;
+    if (token) {
+      try {
+        await apiFetch(`/api/session/${sessionId}`, token, { method: "PATCH" });
+      } catch {
+        // ignore
+      }
+    }
+  }, [sessionId]);
+
+  const finishToSummary = useCallback(async () => {
+    if (endingRef.current) return;
+    endingRef.current = true;
+    await endSessionCleanup();
+    router.push(`/summary/${sessionId}`);
+  }, [endSessionCleanup, router, sessionId]);
+
   const { isConnected, isPaused, start, stop, pause, resume } = useGeminiLive({
     preset,
     onClaim,
     accessToken,
+    sessionId,
+    onTrialExpired: () => {
+      void finishToSummary();
+    },
   });
+  stopRef.current = stop;
 
   useEffect(() => {
     if (authLoading) return;
@@ -53,39 +99,56 @@ export default function SessionPage() {
     }
     if (!accessToken || startedRef.current) return;
     startedRef.current = true;
-    start();
-  }, [authLoading, user, accessToken, start, router]);
 
-  const checkingIdsRef = useRef(checkingIds);
-  useEffect(() => {
-    checkingIdsRef.current = checkingIds;
-  }, [checkingIds]);
-
-  const endSessionCleanup = async () => {
-    stop();
-    // Wait for all in-flight fact-checks to complete before navigating
-    await new Promise<void>((resolve) => {
-      const poll = () => {
-        if (checkingIdsRef.current.size === 0) return resolve();
-        setTimeout(poll, 200);
-      };
-      poll();
-    });
-    if (accessToken) {
+    let cancelled = false;
+    void (async () => {
       try {
-        await apiFetch(`/api/session/${sessionId}`, accessToken, { method: "PATCH" });
+        const res = await apiFetch(`/api/session/${sessionId}`, accessToken);
+        if (!res.ok) throw new Error("Failed to load session");
+        const session = (await res.json()) as SessionDetailResponse;
+        if (cancelled) return;
+        setStartedAt(session.started_at);
+        if (session.ended_at) {
+          router.replace(`/summary/${sessionId}`);
+          return;
+        }
+        if (isAnonymous && trialRemainingSeconds(session.started_at) <= 0) {
+          await finishToSummary();
+          return;
+        }
+        start();
       } catch {
-        // ignore
+        if (!cancelled) router.replace("/");
       }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user, accessToken, isAnonymous, sessionId, start, router, finishToSummary]);
+
+  useEffect(() => {
+    if (!isAnonymous || !startedAt) {
+      setTrialRemaining(null);
+      return;
     }
-  };
+    const tick = () => {
+      const left = trialRemainingSeconds(startedAt);
+      setTrialRemaining(left);
+      if (left <= 0) void finishToSummary();
+    };
+    tick();
+    const id = window.setInterval(tick, 250);
+    return () => window.clearInterval(id);
+  }, [isAnonymous, startedAt, finishToSummary]);
 
   const handleStop = async () => {
-    await endSessionCleanup();
-    router.push(`/summary/${sessionId}`);
+    await finishToSummary();
   };
 
   const handleGoHome = async () => {
+    if (endingRef.current) return;
+    endingRef.current = true;
     setExitDialogOpen(false);
     await endSessionCleanup();
     router.push("/");
@@ -99,12 +162,13 @@ export default function SessionPage() {
   };
 
   const handleSignOut = async () => {
+    if (endingRef.current) return;
+    endingRef.current = true;
     await endSessionCleanup();
     await signOut();
     router.replace("/");
   };
 
-  // Verdict counts for top bar
   const verdictCounts: Record<Verdict, number> = {
     TRUE: 0,
     FALSE: 0,
@@ -136,9 +200,10 @@ export default function SessionPage() {
           totalClaims={claims.length}
           onPause={pause}
           onResume={resume}
-          onStop={handleStop}
+          onStop={() => void handleStop()}
           onSignOut={() => void handleSignOut()}
           onTitleClick={handleTitleClick}
+          trialRemainingSeconds={trialRemaining}
         />
       </div>
       <SessionExitDialog

@@ -7,7 +7,9 @@ import { ExternalLink, Quote } from "lucide-react";
 import Link from "next/link";
 import type { SessionDetailResponse, Verdict } from "@/types";
 import { useAuth } from "@/components/auth-provider";
+import { AuthModal } from "@/components/auth-modal";
 import { SiteHeader } from "@/components/site-header";
+import { TrialConvertBanner } from "@/components/trial-convert-banner";
 import { VerdictProportionBar } from "@/components/verdict-proportion-bar";
 import { apiFetch } from "@/lib/api";
 import { getCachedSession, loadSession, setCachedSession } from "@/lib/session-cache";
@@ -29,13 +31,14 @@ export default function SummaryPage() {
   const params = useParams();
   const router = useRouter();
   const sessionId = params.id as string;
-  const { accessToken, loading: authLoading, user } = useAuth();
+  const { accessToken, loading: authLoading, user, isAnonymous } = useAuth();
 
   const [session, setSession] = useState<SessionDetailResponse | null>(
     () => getCachedSession(sessionId) ?? null,
   );
   const [loadError, setLoadError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
     const cached = getCachedSession(sessionId);
@@ -112,7 +115,7 @@ export default function SummaryPage() {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeader onSignInClick={() => setAuthOpen(true)} />
       <main
         className="min-h-screen px-6 pt-32 pb-16 text-[var(--text-primary)] md:px-12"
         style={{ backgroundColor: "var(--bg-primary)" }}
@@ -168,6 +171,9 @@ export default function SummaryPage() {
 
               {showContent && (
                 <>
+                  {isAnonymous ? (
+                    <TrialConvertBanner onCreateAccount={() => setAuthOpen(true)} />
+                  ) : null}
                   <AnimatePresence>
                     {showBlurbBlock && (
                       <motion.div
@@ -297,24 +303,32 @@ export default function SummaryPage() {
                     </AnimatePresence>
                   </div>
 
-                  <footer className="grid grid-cols-2 gap-4">
+                  <footer className={`grid gap-4 ${isAnonymous ? "grid-cols-1" : "grid-cols-2"}`}>
+                    {isAnonymous ? null : (
+                      <motion.button
+                        onClick={handleCopyLink}
+                        whileHover={{ x: 6 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="h-14 cursor-pointer border border-[var(--border-active)] text-xs font-[family:var(--font-mono)] tracking-widest text-[var(--text-secondary)] uppercase"
+                        style={{ borderRadius: 0 }}
+                      >
+                        {copied ? "COPIED" : "COPY LINK"}
+                      </motion.button>
+                    )}
                     <motion.button
-                      onClick={handleCopyLink}
-                      whileHover={{ x: 6 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="h-14 cursor-pointer border border-[var(--border-active)] text-xs font-[family:var(--font-mono)] tracking-widest text-[var(--text-secondary)] uppercase"
-                      style={{ borderRadius: 0 }}
-                    >
-                      {copied ? "COPIED" : "COPY LINK"}
-                    </motion.button>
-                    <motion.button
-                      onClick={() => router.push("/")}
+                      onClick={() => {
+                        if (isAnonymous) {
+                          setAuthOpen(true);
+                          return;
+                        }
+                        router.push("/");
+                      }}
                       whileHover={{ x: 6 }}
                       whileTap={{ scale: 0.98 }}
                       className="h-14 cursor-pointer bg-[var(--accent-red)] text-xs font-[family:var(--font-mono)] tracking-widest text-white uppercase"
                       style={{ borderRadius: 0 }}
                     >
-                      NEW SESSION
+                      {isAnonymous ? "CREATE ACCOUNT" : "NEW SESSION"}
                     </motion.button>
                   </footer>
                 </>
@@ -323,6 +337,12 @@ export default function SummaryPage() {
           )}
         </div>
       </main>
+      <AuthModal
+        open={authOpen}
+        intent={isAnonymous ? "convert" : "default"}
+        initialMode={isAnonymous ? "signup" : "signin"}
+        onClose={() => setAuthOpen(false)}
+      />
     </>
   );
 

@@ -6,20 +6,25 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { isAnonymousAccount, isPermanentAccount } from "@/lib/account-kind";
 
-type AuthResult = { error: string | null };
+type AuthResult = { error: string | null; pendingConfirmation?: boolean };
 
 type AuthContextValue = {
   user: User | null;
   accessToken: string | null;
   loading: boolean;
+  isAnonymous: boolean;
+  hasAccount: boolean;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (email: string, password: string, fullName: string) => Promise<AuthResult>;
+  signInAnonymously: () => Promise<AuthResult>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<AuthResult>;
   updatePassword: (password: string) => Promise<AuthResult>;
@@ -31,6 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [supabase] = useState(() => createClient());
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const sessionRef = useRef<Session | null>(null);
+  sessionRef.current = session;
 
   useEffect(() => {
     let mounted = true;
@@ -64,6 +71,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(
     async (email: string, password: string, fullName: string) => {
+      const current = sessionRef.current?.user;
+      if (isAnonymousAccount(current)) {
+        const { data, error } = await supabase.auth.updateUser({
+          email,
+          password,
+          data: { full_name: fullName },
+        });
+        if (error) return { error: error.message };
+        return {
+          error: null,
+          pendingConfirmation: Boolean(data.user?.is_anonymous),
+        };
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -73,6 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [supabase],
   );
+
+  const signInAnonymously = useCallback(async () => {
+    if (sessionRef.current?.user) return { error: null };
+    const { error } = await supabase.auth.signInAnonymously();
+    return { error: error?.message ?? null };
+  }, [supabase]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
@@ -97,18 +124,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [supabase],
   );
 
+  const user = session?.user ?? null;
   const value = useMemo<AuthContextValue>(
     () => ({
-      user: session?.user ?? null,
+      user,
       accessToken: session?.access_token ?? null,
       loading,
+      isAnonymous: isAnonymousAccount(user),
+      hasAccount: isPermanentAccount(user),
       signIn,
       signUp,
+      signInAnonymously,
       signOut,
       resetPassword,
       updatePassword,
     }),
-    [session, loading, signIn, signUp, signOut, resetPassword, updatePassword],
+    [
+      user,
+      session?.access_token,
+      loading,
+      signIn,
+      signUp,
+      signInAnonymously,
+      signOut,
+      resetPassword,
+      updatePassword,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { SiteHeader } from "@/components/site-header";
 import { VerdictProportionBar } from "@/components/verdict-proportion-bar";
@@ -35,13 +36,21 @@ const secondaryLinkClassName =
   "inline-flex min-h-10 items-center border border-[var(--border-subtle)] px-4 text-xs font-[family:var(--font-mono)] tracking-widest text-[var(--text-primary)] uppercase transition-colors hover:border-[var(--border-active)]";
 
 export default function SessionsPage() {
-  const { accessToken, loading: authLoading, user } = useAuth();
+  const router = useRouter();
+  const { accessToken, loading: authLoading, hasAccount } = useAuth();
   const [sessions, setSessions] = useState<SessionCard[]>(() => getCachedSessionList() ?? []);
   const [listLoading, setListLoading] = useState(() => getCachedSessionList() === undefined);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user || !accessToken) {
+    if (!hasAccount) {
+      router.replace("/");
+    }
+  }, [authLoading, hasAccount, router]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!hasAccount || !accessToken) {
       setSessions([]);
       setListLoading(false);
       return;
@@ -60,7 +69,7 @@ export default function SessionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, authLoading, user]);
+  }, [accessToken, authLoading, hasAccount]);
 
   return (
     <>
@@ -82,7 +91,7 @@ export default function SessionsPage() {
             </p>
           </header>
 
-          {!authLoading && !user ? (
+          {!authLoading && !hasAccount ? (
             <div className="flex flex-col items-start gap-4">
               <p className="text-lg font-[family:var(--font-display)] text-[var(--text-secondary)] italic">
                 Sign in to view your sessions.

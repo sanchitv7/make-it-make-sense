@@ -6,11 +6,14 @@ import { Eye, EyeOff, X } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 
 type AuthMode = "signin" | "signup" | "forgot";
+export type AuthIntent = "default" | "convert";
 
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  intent?: AuthIntent;
+  initialMode?: AuthMode;
 }
 
 function modeTitle(mode: AuthMode): string {
@@ -43,7 +46,10 @@ function submitLabel(mode: AuthMode): string {
   }
 }
 
-function modeSubtitle(mode: AuthMode): string {
+function modeSubtitle(mode: AuthMode, intent: AuthIntent): string {
+  if (intent === "convert" && mode === "signup") {
+    return "Create an account to keep this session, listen past 30 seconds, and copy a shareable link.";
+  }
   switch (mode) {
     case "forgot":
       return "We’ll email you a link to set a new password.";
@@ -58,10 +64,21 @@ function modeSubtitle(mode: AuthMode): string {
   }
 }
 
-export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
+function heading(mode: AuthMode, intent: AuthIntent): string {
+  if (intent === "convert" && mode === "signup") return "Keep going";
+  return modeTitle(mode);
+}
+
+export function AuthModal({
+  open,
+  onClose,
+  onSuccess,
+  intent = "default",
+  initialMode = "signin",
+}: AuthModalProps) {
   const { signIn, signUp, resetPassword } = useAuth();
   const titleId = useId();
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -72,7 +89,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
 
   useEffect(() => {
     if (!open) return;
-    setMode("signin");
+    setMode(initialMode);
     setFullName("");
     setEmail("");
     setPassword("");
@@ -80,7 +97,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
     setError(null);
     setInfo(null);
     setSubmitting(false);
-  }, [open]);
+  }, [open, initialMode]);
 
   useEffect(() => {
     if (!open) return;
@@ -120,9 +137,13 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
           setError("Name is required.");
           return;
         }
-        const { error: err } = await signUp(email.trim(), password, name);
+        const { error: err, pendingConfirmation } = await signUp(email.trim(), password, name);
         if (err) {
           setError(err);
+          return;
+        }
+        if (pendingConfirmation) {
+          setInfo("Check your email to finish creating your account.");
           return;
         }
         onClose();
@@ -185,11 +206,18 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
               id={titleId}
               className="mb-1 pr-8 text-2xl font-[family:var(--font-display)] text-[var(--text-primary)]"
             >
-              {modeTitle(mode)}
+              {heading(mode, intent)}
             </h2>
             <p className="mb-6 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
-              {modeSubtitle(mode)}
+              {modeSubtitle(mode, intent)}
             </p>
+            {intent === "convert" && mode === "signup" ? (
+              <ul className="mb-6 list-disc space-y-1.5 pl-5 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
+                <li>Listen past 30 seconds</li>
+                <li>Revisit past sessions</li>
+                <li>Copy a shareable verdict link</li>
+              </ul>
+            ) : null}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {mode === "signup" && (

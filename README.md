@@ -4,13 +4,13 @@ Real-time AI fact-checker that listens to live audio, detects factual claims, an
 
 ## What it does
 
-1. You create an account / sign in (email + password)
+1. You tap Begin (no email required for the first 30-second preview)
 2. You pick a context preset (political speech, news broadcast, earnings call, podcast)
 3. The app listens via your microphone
 4. Gemini Live API transcribes the audio and flags factual claims in real time
 5. Each claim is immediately fact-checked using Gemini 2.5 Flash + Google Search
 6. Verdicts appear as cards: **TRUE**, **FALSE**, **MISLEADING**, or **UNVERIFIED**
-7. Every session and its claims are saved to Supabase under your account
+7. After the preview, create an account to keep past sessions, listen past 30 seconds, and copy a shareable verdict link
 
 Verdicts are forced to **UNVERIFIED** if no citation from a trusted domain (Reuters, BBC, `.gov`, etc.) is found — no source, no verdict.
 
@@ -84,8 +84,10 @@ ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
 
 1. Authentication → Providers → Email: enabled
 2. Turn **Confirm email** off for local/v1
-3. Authentication → URL configuration: add `http://localhost:3000/auth/reset` (and production URL) to redirect allow list
-4. Copy **Project URL** and **anon key** (Settings → API)
+3. Authentication → Providers: enable **Anonymous sign-ins**
+4. Authentication → Providers: enable **Manual linking** (needed to convert an anonymous user to email/password)
+5. Authentication → URL configuration: add `http://localhost:3000/auth/reset` (and production URL) to redirect allow list
+6. Copy **Project URL** and **anon key** (Settings → API)
 
 ### 3. Configure the backend
 
@@ -133,7 +135,7 @@ cd backend && source .venv/bin/activate && uvicorn main:app --reload
 cd frontend && npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Guests see the splash; **Begin** or **Sign in** opens auth. After sign-in, setup and listening work as before.
+Open [http://localhost:3000](http://localhost:3000). **Begin** starts a 30-second preview without an email. After that, creating an account keeps the trial session and unlocks unlimited listening, Past Sessions, and copyable verdict links. **Sign in** is still in the header.
 
 ## Contributing / quality gates
 
@@ -147,12 +149,13 @@ Open [http://localhost:3000](http://localhost:3000). Guests see the splash; **Be
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | `GET` | `/health` | public | Health check |
+| `GET` | `/api/account` | JWT | Anonymous flag + trial used |
 | `POST` | `/api/fact-check` | JWT + ownership | Fact-check a claim |
-| `POST` | `/api/session` | JWT | Create a new session |
+| `POST` | `/api/session` | JWT | Create a new session (anonymous: one only) |
 | `GET` | `/api/sessions` | JWT | List ended sessions with claims |
 | `GET` | `/api/session/{id}` | JWT + ownership | Get session + all claims |
 | `PATCH` | `/api/session/{id}` | JWT + ownership | End session (async title/blurb) |
-| `WS` | `/ws/live` | JWT first message (`type: auth`) | Live audio proxy |
+| `WS` | `/ws/live` | JWT first message (`type: auth`, plus `session_id` for anonymous) | Live audio proxy |
 
 ## Key modules
 
@@ -161,7 +164,8 @@ Open [http://localhost:3000](http://localhost:3000). Guests see the splash; **Be
 | File | Purpose |
 |------|---------|
 | `main.py` | FastAPI app, CORS, JWT-gated routes, WebSocket proxy |
-| `auth.py` | Verify Supabase access tokens |
+| `auth.py` | Verify Supabase access tokens (`Principal.is_anonymous`) |
+| `trial.py` | Anonymous trial duration and one-Session gate |
 | `fact_check.py` | Fact-check pipeline |
 | `session_blurb.py` | One-shot session title/blurb |
 | `session_cards.py` | Past Sessions card assembly |
