@@ -215,13 +215,6 @@ export function AuthModal({
             <p className="mb-6 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
               {modeSubtitle(mode, intent)}
             </p>
-            {intent === "convert" && mode === "signup" ? (
-              <ul className="mb-6 list-disc space-y-1.5 pl-5 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
-                <li>Listen without a time limit</li>
-                <li>Revisit past sessions</li>
-                <li>Copy a shareable verdict link</li>
-              </ul>
-            ) : null}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {mode === "signup" && (
