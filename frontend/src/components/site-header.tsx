@@ -17,7 +17,7 @@ interface SiteHeaderProps {
 const authPlaceholder = <div className="min-h-10 min-w-[5.5rem]" aria-hidden="true" />;
 
 export function SiteHeader({ onSignInClick, showBrandTitle = true }: SiteHeaderProps) {
-  const { user, loading, signOut, accessToken } = useAuth();
+  const { user, loading, signOut, accessToken, hasAccount } = useAuth();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -50,9 +50,9 @@ export function SiteHeader({ onSignInClick, showBrandTitle = true }: SiteHeaderP
         <div className="flex items-center gap-4">
           {!authReady ? (
             authPlaceholder
-          ) : user ? (
+          ) : hasAccount ? (
             <>
-              <AccountChip fullName={accountFullNameFromMetadata(user.user_metadata)} />
+              <AccountChip fullName={accountFullNameFromMetadata(user?.user_metadata ?? null)} />
               <Link
                 href="/sessions"
                 className={headerAuthControlClassName}

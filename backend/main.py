@@ -12,11 +12,12 @@ from google import genai
 from google.genai import types
 
 import supabase_client
-from auth import require_user, verify_access_token
+from auth import Principal, require_principal, require_user, verify_principal
 from cors_origins import VERCEL_APP_ORIGIN_REGEX, parse_allowed_origins
 from fact_check import fact_check_claim, init_pool
 from live_config import build_live_connect_config
 from models import (
+    AccountResponse,
     CreateSessionRequest,
     CreateSessionResponse,
     FactCheckRequest,
@@ -26,6 +27,13 @@ from models import (
 )
 from prompts import PROMPTS
 from session_blurb import generate_session_title_blurb
+from trial import (
+    TRIAL_DURATION_SECONDS,
+    TRIAL_EXPIRED_DETAIL,
+    TRIAL_USED_DETAIL,
+    is_trial_used,
+    trial_remaining_seconds,
+)
 
 load_dotenv()
 
@@ -100,10 +108,37 @@ async def live_ws(
         await websocket.close(code=4401, reason="Unauthorized")
         return
     try:
-        verify_access_token(auth_msg["access_token"])
+        principal = verify_principal(auth_msg["access_token"])
     except HTTPException:
         await websocket.close(code=4401, reason="Unauthorized")
         return
+
+    trial_watchdog: asyncio.Task | None = None
+    if principal.is_anonymous:
+        session_id = auth_msg.get("session_id")
+        if not isinstance(session_id, str) or not session_id:
+            await websocket.close(code=4403, reason=TRIAL_EXPIRED_DETAIL)
+            return
+        try:
+            session_row = supabase_client.assert_session_owner(session_id, principal.user_id)
+        except HTTPException:
+            await websocket.close(code=4403, reason=TRIAL_EXPIRED_DETAIL)
+            return
+        remaining = trial_remaining_seconds(session_row["started_at"])
+        if remaining <= 0:
+            await websocket.send_text(json.dumps({"type": TRIAL_EXPIRED_DETAIL}))
+            await websocket.close(code=4403, reason=TRIAL_EXPIRED_DETAIL)
+            return
+
+        async def _trial_watchdog() -> None:
+            try:
+                await asyncio.sleep(remaining)
+                await websocket.send_text(json.dumps({"type": TRIAL_EXPIRED_DETAIL}))
+                await websocket.close(code=4403, reason=TRIAL_EXPIRED_DETAIL)
+            except Exception:
+                pass
+
+        trial_watchdog = asyncio.create_task(_trial_watchdog())
 
     await websocket.send_text(json.dumps({"type": "auth_ok"}))
 
@@ -166,6 +201,9 @@ async def live_ws(
             await websocket.close(1011, str(e))
         except Exception:
             pass
+    finally:
+        if trial_watchdog is not None:
+            trial_watchdog.cancel()
 
 
 @app.post("/api/fact-check", response_model=FactCheckResponse)
@@ -206,18 +244,38 @@ async def check_fact(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/account", response_model=AccountResponse)
+async def get_account(
+    principal: Principal = Depends(require_principal),
+):
+    session_count = supabase_client.count_sessions_for_user(principal.user_id)
+    return AccountResponse(
+        is_anonymous=principal.is_anonymous,
+        trial_used=is_trial_used(
+            is_anonymous=principal.is_anonymous,
+            session_count=session_count,
+        ),
+        trial_duration_seconds=TRIAL_DURATION_SECONDS,
+    )
+
+
 @app.post("/api/session", response_model=CreateSessionResponse)
 async def create_session(
     request: CreateSessionRequest,
-    user_id: str = Depends(require_user),
+    principal: Principal = Depends(require_principal),
 ):
     try:
+        session_count = supabase_client.count_sessions_for_user(principal.user_id)
+        if is_trial_used(is_anonymous=principal.is_anonymous, session_count=session_count):
+            raise HTTPException(status_code=403, detail=TRIAL_USED_DETAIL)
         session_id = supabase_client.create_session(
             preset=request.context_preset,
-            user_id=user_id,
+            user_id=principal.user_id,
             context_detail=request.context_detail,
         )
         return CreateSessionResponse(session_id=session_id)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -80,3 +80,9 @@ export interface SessionCard {
 export interface SessionListResponse {
   sessions: SessionCard[];
 }
+
+export interface AccountStatus {
+  is_anonymous: boolean;
+  trial_used: boolean;
+  trial_duration_seconds: number;
+}

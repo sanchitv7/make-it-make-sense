@@ -1,4 +1,4 @@
--- Run in Supabase SQL Editor after enabling Email auth (Confirm email OFF for v1).
+-- Run in Supabase SQL Editor after enabling Email auth (Confirm email ON).
 -- Adds Account ownership onto listening Sessions.
 
 ALTER TABLE sessions
