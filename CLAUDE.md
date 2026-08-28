@@ -34,7 +34,7 @@ Environment: copy `backend/.env.example` → `backend/.env` and fill in:
 
 Frontend env (`frontend/.env.local`): `NEXT_PUBLIC_BACKEND_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-Auth: email/password via Supabase Auth. Begin silently creates an Anonymous Account for a 30-second first Session; creating an email Account converts that user in place. Session HTTP, fact-check, and `/ws/live` require JWT. Sessions store `user_id`. Schema migration: `docs/supabase-auth-migration.sql`. ADRs: `docs/adr/0001-supabase-auth.md`, `docs/adr/0003-anonymous-trial.md`.
+Auth: email/password via Supabase Auth. Begin silently creates an Anonymous Account for a one-minute first Session; creating an email Account converts that user in place. Session HTTP, fact-check, and `/ws/live` require JWT. Sessions store `user_id`. Schema migration: `docs/supabase-auth-migration.sql`. ADRs: `docs/adr/0001-supabase-auth.md`, `docs/adr/0003-anonymous-trial.md`.
 
 Unit tests (in `make check`):
 ```bash

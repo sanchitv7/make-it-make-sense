@@ -48,7 +48,7 @@ function submitLabel(mode: AuthMode): string {
 
 function modeSubtitle(mode: AuthMode, intent: AuthIntent): string {
   if (intent === "convert" && mode === "signup") {
-    return "Create an account to keep this session, listen past 30 seconds, and copy a shareable link.";
+    return "Keep this session, listen longer, and share the verdict.";
   }
   switch (mode) {
     case "forgot":
@@ -217,7 +217,7 @@ export function AuthModal({
             </p>
             {intent === "convert" && mode === "signup" ? (
               <ul className="mb-6 list-disc space-y-1.5 pl-5 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
-                <li>Listen past 30 seconds</li>
+                <li>Listen without a time limit</li>
                 <li>Revisit past sessions</li>
                 <li>Copy a shareable verdict link</li>
               </ul>
