@@ -31,7 +31,7 @@ Browser ──mic──→ FastAPI /ws/live (JWT) ──→ Gemini Live API
   │──POST /api/fact-check (JWT)──→ Gemini 2.5 Flash + Google Search
 ```
 
-Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no email) and opens context setup. That Account may create one Session, capped at 60 seconds of wall-clock time from `started_at`. After the trial, they see The Verdict; the next Begin asks them to create a permanent Account (history, unlimited listen, copyable links). Signed-in permanent Accounts can open Past Sessions (`/sessions`) to reopen ended Sessions that have Claims.
+Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no email) and opens context setup. That Account may create one Session, capped at 60 seconds of wall-clock time from `started_at`. After the trial, they see The Verdict. A later visit in the same browser still has that Anonymous Account: home states the preview is already used (and can link to the last verdict) instead of implying they can listen again. Creating an email Account keeps the trial Session. Signed-in permanent Accounts can open Past Sessions (`/sessions`) to reopen ended Sessions that have Claims.
 
 ## File Structure
 
@@ -59,6 +59,7 @@ Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no 
 - `src/components/auth-provider.tsx` / `auth-modal.tsx` / `site-header.tsx` / `account-chip.tsx`
 - `src/lib/account-display-name.ts` — First-name label from Account `full_name`
 - `src/lib/trial.ts` — 60-second trial remaining-time helpers
+- `src/lib/auth-copy.ts` — convert vs returning-visitor auth/splash copy
 - `src/lib/account-kind.ts` — Anonymous vs permanent Account checks
 - `src/lib/pending-convert-password.ts` — Short-lived password stash while converting an Anonymous Account
 - `src/lib/supabase/` — Browser/server/middleware clients

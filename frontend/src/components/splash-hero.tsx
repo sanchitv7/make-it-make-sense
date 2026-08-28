@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, type Variants, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import {
   Mic,
   Search,
@@ -11,15 +12,22 @@ import {
   XCircle,
   AlertTriangle,
   HelpCircle,
-  Quote,
 } from "lucide-react";
+import { splashCtaLabel, SPLASH_TRIAL_USED_HINT } from "@/lib/auth-copy";
 
 interface SplashHeroProps {
   onBeginClick: () => void;
+  trialUsed?: boolean;
+  lastPreviewHref?: string | null;
   sectionId?: string;
 }
 
-export function SplashHero({ onBeginClick, sectionId = "splash-hero" }: SplashHeroProps) {
+export function SplashHero({
+  onBeginClick,
+  trialUsed = false,
+  lastPreviewHref = null,
+  sectionId = "splash-hero",
+}: SplashHeroProps) {
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
@@ -359,6 +367,11 @@ export function SplashHero({ onBeginClick, sectionId = "splash-hero" }: SplashHe
 
         {/* CTA Button */}
         <motion.div variants={fadeUpVariants} transition={{ delay: 1.8 }} className="pt-12">
+          {trialUsed ? (
+            <p className="mb-5 max-w-xl text-base leading-relaxed font-[family:var(--font-body)] text-[var(--text-secondary)]">
+              {SPLASH_TRIAL_USED_HINT}
+            </p>
+          ) : null}
           <motion.button
             onClick={onBeginClick}
             whileHover={{ x: 6 }}
@@ -366,9 +379,19 @@ export function SplashHero({ onBeginClick, sectionId = "splash-hero" }: SplashHe
             className="inline-flex cursor-pointer items-center gap-3 bg-[var(--accent-red)] px-10 py-5 text-sm font-[family:var(--font-display)] font-bold tracking-[0.2em] text-white uppercase"
             style={{ borderRadius: 0 }}
           >
-            Begin
+            {splashCtaLabel(trialUsed)}
             <ArrowRight size={20} strokeWidth={2} />
           </motion.button>
+          {trialUsed && lastPreviewHref ? (
+            <div className="mt-5">
+              <Link
+                href={lastPreviewHref}
+                className="text-sm font-[family:var(--font-body)] text-[var(--text-secondary)] underline underline-offset-2 hover:text-[var(--text-primary)]"
+              >
+                View last preview
+              </Link>
+            </div>
+          ) : null}
         </motion.div>
       </div>
 
