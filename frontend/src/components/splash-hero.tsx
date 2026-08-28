@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { motion, type Variants, AnimatePresence } from "framer-motion";
-import Link from "next/link";
 import {
   Mic,
   Search,
@@ -18,14 +17,12 @@ import { splashCtaLabel, SPLASH_TRIAL_USED_HINT } from "@/lib/auth-copy";
 interface SplashHeroProps {
   onBeginClick: () => void;
   trialUsed?: boolean;
-  lastPreviewHref?: string | null;
   sectionId?: string;
 }
 
 export function SplashHero({
   onBeginClick,
   trialUsed = false,
-  lastPreviewHref = null,
   sectionId = "splash-hero",
 }: SplashHeroProps) {
   const containerVariants: Variants = {
@@ -382,16 +379,6 @@ export function SplashHero({
             {splashCtaLabel(trialUsed)}
             <ArrowRight size={20} strokeWidth={2} />
           </motion.button>
-          {trialUsed && lastPreviewHref ? (
-            <div className="mt-5">
-              <Link
-                href={lastPreviewHref}
-                className="text-sm font-[family:var(--font-body)] text-[var(--text-secondary)] underline underline-offset-2 hover:text-[var(--text-primary)]"
-              >
-                View last preview
-              </Link>
-            </div>
-          ) : null}
         </motion.div>
       </div>
 

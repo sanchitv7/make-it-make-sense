@@ -7,7 +7,7 @@ import { AuthModal, type AuthIntent, type AuthMode } from "@/components/auth-mod
 import { SiteHeader } from "@/components/site-header";
 import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
-import type { AccountStatus, SessionListResponse } from "@/types";
+import type { AccountStatus } from "@/types";
 
 function headerShouldSolidate(headline: Element | null, setup: Element | null): boolean {
   if (setup) {
@@ -32,7 +32,6 @@ export default function Home() {
   const [showHeaderBrand, setShowHeaderBrand] = useState(false);
   const [scrollReady, setScrollReady] = useState(false);
   const [trialUsed, setTrialUsed] = useState<boolean | null>(null);
-  const [lastPreviewHref, setLastPreviewHref] = useState<string | null>(null);
   const [beginError, setBeginError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -47,7 +46,6 @@ export default function Home() {
   useEffect(() => {
     if (!accessToken || !isAnonymous) {
       setTrialUsed(hasAccount ? false : null);
-      setLastPreviewHref(null);
       return;
     }
     let cancelled = false;
@@ -56,29 +54,11 @@ export default function Home() {
         if (!res.ok) throw new Error("Failed to load account");
         return res.json() as Promise<AccountStatus>;
       })
-      .then(async (data) => {
-        if (cancelled) return;
-        setTrialUsed(data.trial_used);
-        if (!data.trial_used) {
-          setLastPreviewHref(null);
-          return;
-        }
-        try {
-          const listRes = await apiFetch("/api/sessions", accessToken);
-          if (!listRes.ok) throw new Error("Failed to load sessions");
-          const list = (await listRes.json()) as SessionListResponse;
-          if (cancelled) return;
-          const lastId = list.sessions[0]?.id;
-          setLastPreviewHref(lastId ? `/summary/${lastId}` : null);
-        } catch {
-          if (!cancelled) setLastPreviewHref(null);
-        }
+      .then((data) => {
+        if (!cancelled) setTrialUsed(data.trial_used);
       })
       .catch(() => {
-        if (!cancelled) {
-          setTrialUsed(false);
-          setLastPreviewHref(null);
-        }
+        if (!cancelled) setTrialUsed(false);
       });
     return () => {
       cancelled = true;
@@ -192,11 +172,7 @@ export default function Home() {
     <>
       <SiteHeader showBrandTitle={showHeaderBrand} onSignInClick={openSignIn} />
       <main>
-        <SplashHero
-          onBeginClick={() => void handleBeginClick()}
-          trialUsed={previewAlreadyUsed}
-          lastPreviewHref={lastPreviewHref}
-        />
+        <SplashHero onBeginClick={() => void handleBeginClick()} trialUsed={previewAlreadyUsed} />
         {beginError ? (
           <p
             className="fixed bottom-6 left-1/2 z-[70] max-w-md -translate-x-1/2 px-4 py-3 text-center text-sm font-[family:var(--font-body)] text-white shadow-lg"

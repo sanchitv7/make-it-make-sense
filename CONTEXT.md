@@ -31,7 +31,7 @@ Browser ──mic──→ FastAPI /ws/live (JWT) ──→ Gemini Live API
   │──POST /api/fact-check (JWT)──→ Gemini 2.5 Flash + Google Search
 ```
 
-Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no email) and opens context setup. That Account may create one Session, capped at 60 seconds of wall-clock time from `started_at`. After the trial, they see The Verdict. A later visit in the same browser still has that Anonymous Account: home states the preview is already used (and can link to the last verdict) instead of implying they can listen again. Creating an email Account keeps the trial Session. Signed-in permanent Accounts can open Past Sessions (`/sessions`) to reopen ended Sessions that have Claims.
+Guests see the splash. **Begin** silently creates an Anonymous Account (JWT, no email) and opens context setup. That Account may create one Session, capped at 60 seconds of wall-clock time from `started_at`. After the trial, they see The Verdict with a one-time Keep this session prompt. A later visit in the same browser still has that Anonymous Account: home states the preview is already used and asks them to create an Account — it does not reopen the trial Verdict. Creating an email Account keeps the trial Session. Signed-in permanent Accounts can open Past Sessions (`/sessions`) to reopen ended Sessions that have Claims.
 
 ## File Structure
 
