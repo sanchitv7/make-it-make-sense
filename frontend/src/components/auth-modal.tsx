@@ -4,9 +4,16 @@ import { FormEvent, useEffect, useId, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Eye, EyeOff, X } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import {
+  authHeading,
+  authModeSubtitle,
+  authPendingConfirmMessage,
+  authSubmitLabel,
+  type AuthIntent,
+  type AuthMode,
+} from "@/lib/auth-copy";
 
-type AuthMode = "signin" | "signup" | "forgot";
-export type AuthIntent = "default" | "convert";
+export type { AuthIntent, AuthMode };
 
 interface AuthModalProps {
   open: boolean;
@@ -14,59 +21,6 @@ interface AuthModalProps {
   onSuccess?: () => void;
   intent?: AuthIntent;
   initialMode?: AuthMode;
-}
-
-function modeTitle(mode: AuthMode): string {
-  switch (mode) {
-    case "signup":
-      return "Create account";
-    case "forgot":
-      return "Reset password";
-    case "signin":
-      return "Sign in";
-    default: {
-      const _exhaustive: never = mode;
-      return _exhaustive;
-    }
-  }
-}
-
-function submitLabel(mode: AuthMode): string {
-  switch (mode) {
-    case "forgot":
-      return "Send reset link";
-    case "signup":
-      return "Create account";
-    case "signin":
-      return "Continue";
-    default: {
-      const _exhaustive: never = mode;
-      return _exhaustive;
-    }
-  }
-}
-
-function modeSubtitle(mode: AuthMode, intent: AuthIntent): string {
-  if (intent === "convert" && mode === "signup") {
-    return "Keep this session, listen longer, and share the verdict.";
-  }
-  switch (mode) {
-    case "forgot":
-      return "We’ll email you a link to set a new password.";
-    case "signup":
-      return "Name, email, and password to start listening.";
-    case "signin":
-      return "Email and password to start listening.";
-    default: {
-      const _exhaustive: never = mode;
-      return _exhaustive;
-    }
-  }
-}
-
-function heading(mode: AuthMode, intent: AuthIntent): string {
-  if (intent === "convert" && mode === "signup") return "Keep going";
-  return modeTitle(mode);
 }
 
 export function AuthModal({
@@ -143,11 +97,7 @@ export function AuthModal({
           return;
         }
         if (pendingConfirmation) {
-          setInfo(
-            intent === "convert"
-              ? "Check your email and open the confirmation link in this browser to keep this session."
-              : "Check your email to finish creating your account.",
-          );
+          setInfo(authPendingConfirmMessage(intent));
           return;
         }
         onClose();
@@ -210,10 +160,10 @@ export function AuthModal({
               id={titleId}
               className="mb-1 pr-8 text-2xl font-[family:var(--font-display)] text-[var(--text-primary)]"
             >
-              {heading(mode, intent)}
+              {authHeading(mode, intent)}
             </h2>
             <p className="mb-6 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
-              {modeSubtitle(mode, intent)}
+              {authModeSubtitle(mode, intent)}
             </p>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -298,7 +248,7 @@ export function AuthModal({
                 className="mt-1 h-12 cursor-pointer text-sm font-[family:var(--font-display)] font-bold tracking-[0.15em] text-white uppercase disabled:opacity-60"
                 style={{ backgroundColor: "var(--accent-red)" }}
               >
-                {submitting ? "…" : submitLabel(mode)}
+                {submitting ? "…" : authSubmitLabel(mode)}
               </button>
             </form>
 

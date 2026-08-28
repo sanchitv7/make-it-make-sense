@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { SplashHero } from "@/components/splash-hero";
 import { ContextSetup } from "@/components/context-setup";
-import { AuthModal, type AuthIntent } from "@/components/auth-modal";
+import { AuthModal, type AuthIntent, type AuthMode } from "@/components/auth-modal";
 import { SiteHeader } from "@/components/site-header";
 import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
+import { clearTrialVerdictAccess } from "@/lib/trial-verdict-access";
 import type { AccountStatus } from "@/types";
 
 function headerShouldSolidate(headline: Element | null, setup: Element | null): boolean {
@@ -27,6 +28,7 @@ export default function Home() {
   const { user, loading, accessToken, isAnonymous, hasAccount, signInAnonymously } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
   const [authIntent, setAuthIntent] = useState<AuthIntent>("default");
+  const [authInitialMode, setAuthInitialMode] = useState<AuthMode>("signin");
   const [pendingBegin, setPendingBegin] = useState(false);
   const [showHeaderBrand, setShowHeaderBrand] = useState(false);
   const [scrollReady, setScrollReady] = useState(false);
@@ -65,6 +67,12 @@ export default function Home() {
   }, [accessToken, isAnonymous, hasAccount]);
 
   const canListen = hasAccount || (isAnonymous && trialUsed === false);
+  const previewAlreadyUsed = Boolean(isAnonymous && trialUsed);
+
+  // Leaving The Verdict for home ends the one-time anonymous pass.
+  useEffect(() => {
+    if (previewAlreadyUsed) clearTrialVerdictAccess();
+  }, [previewAlreadyUsed]);
 
   useEffect(() => {
     if (!scrollReady) return;
@@ -100,14 +108,22 @@ export default function Home() {
     document.getElementById("setup-section")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const openConvert = useCallback(() => {
-    setAuthIntent("convert");
+  const openTrialUsed = useCallback(() => {
+    setAuthIntent("trial_used");
+    setAuthInitialMode("signup");
     setAuthOpen(true);
   }, []);
 
   const openSignIn = useCallback(() => {
     setPendingBegin(false);
     setAuthIntent("default");
+    setAuthInitialMode("signin");
+    setAuthOpen(true);
+  }, []);
+
+  const openSignup = useCallback(() => {
+    setAuthIntent("default");
+    setAuthInitialMode("signup");
     setAuthOpen(true);
   }, []);
 
@@ -122,9 +138,9 @@ export default function Home() {
     }
     if (isAnonymous && trialUsed) {
       setPendingBegin(false);
-      openConvert();
+      openTrialUsed();
     }
-  }, [pendingBegin, canListen, isAnonymous, trialUsed, openConvert]);
+  }, [pendingBegin, canListen, isAnonymous, trialUsed, openTrialUsed]);
 
   const handleBeginClick = async () => {
     setBeginError(null);
@@ -133,7 +149,7 @@ export default function Home() {
       return;
     }
     if (isAnonymous && trialUsed) {
-      openConvert();
+      openTrialUsed();
       return;
     }
     if (user && trialUsed === null) {
@@ -146,7 +162,7 @@ export default function Home() {
       console.error("[Auth] Anonymous sign-in failed:", error);
       setPendingBegin(false);
       setBeginError("Preview isn’t available right now. Create an account to start listening.");
-      openConvert();
+      openSignup();
     }
   };
 
@@ -162,7 +178,7 @@ export default function Home() {
     <>
       <SiteHeader showBrandTitle={showHeaderBrand} onSignInClick={openSignIn} />
       <main>
-        <SplashHero onBeginClick={() => void handleBeginClick()} />
+        <SplashHero onBeginClick={() => void handleBeginClick()} trialUsed={previewAlreadyUsed} />
         {beginError ? (
           <p
             className="fixed bottom-6 left-1/2 z-[70] max-w-md -translate-x-1/2 px-4 py-3 text-center text-sm font-[family:var(--font-body)] text-white shadow-lg"
@@ -174,14 +190,14 @@ export default function Home() {
         ) : null}
         {!loading && canListen && (
           <div id="setup-section" className="scroll-mt-24">
-            <ContextSetup onTrialUsed={openConvert} />
+            <ContextSetup onTrialUsed={openTrialUsed} />
           </div>
         )}
       </main>
       <AuthModal
         open={authOpen}
         intent={authIntent}
-        initialMode={authIntent === "convert" ? "signup" : "signin"}
+        initialMode={authInitialMode}
         onClose={() => {
           setAuthOpen(false);
           setPendingBegin(false);

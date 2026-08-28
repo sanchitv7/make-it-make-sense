@@ -13,6 +13,7 @@ import { TrialConvertBanner } from "@/components/trial-convert-banner";
 import { VerdictProportionBar } from "@/components/verdict-proportion-bar";
 import { apiFetch } from "@/lib/api";
 import { getCachedSession, loadSession, setCachedSession } from "@/lib/session-cache";
+import { hasTrialVerdictAccess } from "@/lib/trial-verdict-access";
 import { PRESET_LABELS, VERDICT_CONFIG } from "@/lib/verdict-config";
 
 const BLURB_POLL_MS = 1500;
@@ -45,11 +46,23 @@ export default function SummaryPage() {
     if (cached) setSession(cached);
   }, [sessionId]);
 
+  // Anonymous Accounts only see The Verdict once, right after the trial ends.
+  useEffect(() => {
+    if (authLoading) return;
+    if (!isAnonymous) return;
+    if (hasTrialVerdictAccess(sessionId)) return;
+    setSession(null);
+    router.replace("/");
+  }, [authLoading, isAnonymous, sessionId, router]);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user || !accessToken) {
       setSession(null);
       setLoadError(false);
+      return;
+    }
+    if (isAnonymous && !hasTrialVerdictAccess(sessionId)) {
       return;
     }
     let cancelled = false;
@@ -65,7 +78,7 @@ export default function SummaryPage() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, accessToken, authLoading, user]);
+  }, [sessionId, accessToken, authLoading, user, isAnonymous]);
 
   const needsBlurb = Boolean(session && (!session.title?.trim() || !session.blurb?.trim()));
 
