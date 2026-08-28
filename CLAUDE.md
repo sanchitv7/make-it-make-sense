@@ -92,6 +92,8 @@ Must be applied manually in the Supabase SQL editor — see `CONTEXT.md` for the
 
 ## Agent skills
 
+pstack is enabled for this repo (`.cursor/settings.json`). Use `/poteto-mode` for non-trivial work. Do not use the superpowers `brainstorming` skill.
+
 ### Issue tracker
 
 Issues live in this repo's GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`.
