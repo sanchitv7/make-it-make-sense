@@ -1,10 +1,10 @@
 # Frontend
 
 Next.js 14 app (App Router). Source in `src/`:
-- `app/` — routes: `/` (home), `/session/[id]`, `/summary/[id]`
-- `components/` — UI components (verdict-feed, top-bar, etc.)
+- `app/` — routes: `/` (home), `/session/[id]`, `/summary/[id]`, `/sessions`, `/auth/callback`, `/auth/reset`
+- `components/` — UI components (verdict-feed, top-bar, auth-modal, etc.)
 - `hooks/` — `use-gemini-live.ts`, `use-fact-check.ts`
-- `lib/` — pure helpers (e.g. `claim-dedupe.ts`)
+- `lib/` — pure helpers (`trial.ts`, `account-kind.ts`, `claim-dedupe.ts`)
 - `types/` — shared TypeScript types
 
 ```bash

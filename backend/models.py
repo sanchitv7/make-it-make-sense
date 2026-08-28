@@ -81,3 +81,9 @@ class SessionCard(BaseModel):
 
 class SessionListResponse(BaseModel):
     sessions: list[SessionCard]
+
+
+class AccountResponse(BaseModel):
+    is_anonymous: bool
+    trial_used: bool
+    trial_duration_seconds: int

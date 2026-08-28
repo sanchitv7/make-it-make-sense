@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { DetectedClaim, ContextPreset } from "@/types";
 import { backendUrl } from "@/lib/api";
+import { TRIAL_EXPIRED_DETAIL } from "@/lib/trial";
 import { createSileroVad, type SileroVadEvent, type SileroVadHandle } from "@/lib/silero-vad";
 
 const RECONNECT_BEFORE_MS = 13.5 * 60 * 1000;
@@ -26,9 +27,17 @@ interface UseGeminiLiveOptions {
   preset: ContextPreset;
   onClaim: (claim: DetectedClaim) => void;
   accessToken: string | null;
+  sessionId: string;
+  onTrialExpired?: () => void;
 }
 
-export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOptions) {
+export function useGeminiLive({
+  preset,
+  onClaim,
+  accessToken,
+  sessionId,
+  onTrialExpired,
+}: UseGeminiLiveOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
 
@@ -44,6 +53,9 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
   const presetRef = useRef(preset);
   const onClaimRef = useRef(onClaim);
   const accessTokenRef = useRef(accessToken);
+  const sessionIdRef = useRef(sessionId);
+  const onTrialExpiredRef = useRef(onTrialExpired);
+  const trialEndedRef = useRef(false);
   // ID of the current "open" text segment being streamed into
   const currentTextSegIdRef = useRef<string | null>(null);
 
@@ -56,6 +68,12 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
   useEffect(() => {
     accessTokenRef.current = accessToken;
   }, [accessToken]);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
+  useEffect(() => {
+    onTrialExpiredRef.current = onTrialExpired;
+  }, [onTrialExpired]);
 
   async function teardownSileroVad() {
     const vad = sileroVadRef.current;
@@ -250,7 +268,13 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
 
       ws.onopen = () => {
         console.log("[Live] WS open — sending auth");
-        ws.send(JSON.stringify({ type: "auth", access_token: token }));
+        ws.send(
+          JSON.stringify({
+            type: "auth",
+            access_token: token,
+            session_id: sessionIdRef.current,
+          }),
+        );
       };
 
       ws.onmessage = async (event) => {
@@ -267,6 +291,16 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
         if (msg.type === "auth_ok") {
           console.log("[Live] Auth accepted");
           authAccepted = true;
+          return;
+        }
+
+        if (msg.type === TRIAL_EXPIRED_DETAIL) {
+          if (!trialEndedRef.current) {
+            trialEndedRef.current = true;
+            stoppedRef.current = true;
+            onTrialExpiredRef.current?.();
+          }
+          ws.close();
           return;
         }
 
@@ -330,6 +364,14 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
         turnOpenRef.current = false;
         teardownAudio();
         setIsConnected(false);
+        if (e.code === 4403 || e.reason === TRIAL_EXPIRED_DETAIL) {
+          if (!trialEndedRef.current) {
+            trialEndedRef.current = true;
+            stoppedRef.current = true;
+            onTrialExpiredRef.current?.();
+          }
+          return;
+        }
         if (!stoppedRef.current) {
           console.log("[Live] Reconnecting in 2s");
           setTimeout(doConnect, 2000);
@@ -376,6 +418,7 @@ export function useGeminiLive({ preset, onClaim, accessToken }: UseGeminiLiveOpt
 
   const start = useCallback(async () => {
     stoppedRef.current = false;
+    trialEndedRef.current = false;
     setSegments([]);
     currentTextSegIdRef.current = null;
     setIsConnected(false);

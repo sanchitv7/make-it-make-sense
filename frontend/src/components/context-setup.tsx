@@ -7,6 +7,7 @@ import { Landmark, Newspaper, MessageSquare, Mic2, ArrowRight } from "lucide-rea
 import type { ContextPreset, ContextPresetOption } from "@/types";
 import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
+import { isTrialUsedDetail } from "@/lib/trial";
 
 const PRESETS: (ContextPresetOption & { icon: React.ReactNode })[] = [
   {
@@ -56,9 +57,13 @@ const itemVariants = {
   },
 };
 
-export function ContextSetup() {
+interface ContextSetupProps {
+  onTrialUsed?: () => void;
+}
+
+export function ContextSetup({ onTrialUsed }: ContextSetupProps) {
   const router = useRouter();
-  const { accessToken } = useAuth();
+  const { accessToken, isAnonymous } = useAuth();
   const [selected, setSelected] = useState<ContextPreset | null>(null);
   const [contextDetail, setContextDetail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +79,19 @@ export function ContextSetup() {
           context_detail: contextDetail || null,
         }),
       });
-      if (!res.ok) throw new Error("Failed to create session");
+      if (!res.ok) {
+        const body: unknown = await res.json().catch(() => null);
+        const detail =
+          body && typeof body === "object" && "detail" in body
+            ? (body as { detail: unknown }).detail
+            : null;
+        if (res.status === 403 && isTrialUsedDetail(detail)) {
+          onTrialUsed?.();
+          setIsLoading(false);
+          return;
+        }
+        throw new Error("Failed to create session");
+      }
       const { session_id } = await res.json();
       const params = new URLSearchParams({ preset: selected });
       if (contextDetail) params.set("context", contextDetail);
@@ -103,6 +120,12 @@ export function ContextSetup() {
           <p className="mt-2 text-base font-[family:var(--font-body)] text-[var(--text-secondary)]">
             Pick a setting so we know which claims matter most.
           </p>
+          {isAnonymous ? (
+            <p className="mt-3 text-sm font-[family:var(--font-body)] text-[var(--text-muted)]">
+              This preview listens for 30 seconds. Create an account after to keep going and save
+              sessions.
+            </p>
+          ) : null}
         </motion.header>
 
         <motion.div className="grid grid-cols-1 gap-4 md:grid-cols-2" variants={containerVariants}>

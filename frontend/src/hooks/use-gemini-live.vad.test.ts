@@ -24,6 +24,11 @@ describe("use-gemini-live VAD wiring", () => {
     expect(hookSource).toMatch(/onSileroEvent/);
   });
 
+  it("sends session_id with the auth message for trial enforcement", () => {
+    expect(hookSource).toMatch(/session_id: sessionIdRef\.current/);
+    expect(hookSource).toMatch(/TRIAL_EXPIRED_DETAIL/);
+  });
+
   it("does not start a timer or server VAD fallback", () => {
     expect(hookSource).not.toMatch(/backupFlush/);
     expect(hookSource).not.toMatch(/startBackupFlush/);
