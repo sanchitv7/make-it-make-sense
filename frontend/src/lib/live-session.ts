@@ -322,6 +322,9 @@ export class LiveSession {
       const pulled = pullRemainderOnSpeechEnd(this.tail);
       this.tail = pulled.next;
       this.hearSentences(pulled.sentences);
+      this.turnSeq += 1;
+      this.tail = { buffer: "", turnId: this.turnSeq as TurnId };
+      this.sendActivity("speech_start");
       return;
     }
     const _exhaustive: never = event;
