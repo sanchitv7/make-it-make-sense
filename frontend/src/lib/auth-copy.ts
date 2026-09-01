@@ -1,5 +1,3 @@
-/** Auth modal copy. `convert` is for someone who just finished a preview. */
-
 export type AuthMode = "signin" | "signup" | "forgot";
 export type AuthIntent = "default" | "convert" | "trial_used";
 
@@ -69,6 +67,8 @@ export function authPendingConfirmMessage(intent: AuthIntent): string {
 
 export const SPLASH_TRIAL_USED_HINT =
   "This device already used a one-minute preview. Create an account to listen again.";
+
+export const CREATE_ACCOUNT_CTA = "CREATE ACCOUNT";
 
 export function splashCtaLabel(trialUsed: boolean): string {
   return trialUsed ? "Create account" : "Begin";

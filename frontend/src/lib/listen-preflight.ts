@@ -9,9 +9,12 @@ export type ListenIntent = {
   accessToken: string;
 };
 
+export const MIC_UNUSABLE_COPY =
+  "Can't use the microphone. Allow access in the browser, and check that a microphone is connected.";
+
 export class MicDeniedError extends Error {
   constructor() {
-    super("mic denied");
+    super(MIC_UNUSABLE_COPY);
     this.name = "MicDeniedError";
   }
 }
@@ -21,6 +24,17 @@ export class TrialUsedError extends Error {
     super("trial used");
     this.name = "TrialUsedError";
   }
+}
+
+export type ListenStartFailure =
+  { kind: "trial-used" } | { kind: "mic-unusable"; message: string } | { kind: "failed" };
+
+export function interpretListenStartError(err: unknown): ListenStartFailure {
+  if (err instanceof TrialUsedError) return { kind: "trial-used" };
+  if (err instanceof MicDeniedError) {
+    return { kind: "mic-unusable", message: err.message };
+  }
+  return { kind: "failed" };
 }
 
 type PreflightSlot =
