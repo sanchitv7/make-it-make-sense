@@ -1,16 +1,32 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import type { DetectedClaim, FactCheckResult } from "@/types";
+import type { Claim, ListenReady } from "@/types/claim";
 import { ClaimCard } from "@/components/claim-card";
 
-interface VerdictFeedProps {
-  claims: DetectedClaim[];
-  verdicts: FactCheckResult[];
-  checkingIds: Set<string>;
+function emptyCopy(ready: ListenReady): string {
+  switch (ready.status) {
+    case "listening":
+      return "Listening for factual claims…";
+    case "connecting":
+      return "Connecting…";
+    case "paused":
+      return "Paused";
+    case "offline":
+      return "Offline";
+    default: {
+      const _exhaustive: never = ready;
+      return _exhaustive;
+    }
+  }
 }
 
-export function VerdictFeed({ claims, verdicts, checkingIds }: VerdictFeedProps) {
+interface VerdictFeedProps {
+  claims: Claim[];
+  ready: ListenReady;
+}
+
+export function VerdictFeed({ claims, ready }: VerdictFeedProps) {
   if (claims.length === 0) {
     return (
       <motion.div
@@ -33,7 +49,7 @@ export function VerdictFeed({ claims, verdicts, checkingIds }: VerdictFeedProps)
             lineHeight: 1.3,
           }}
         >
-          Listening for factual claims…
+          {emptyCopy(ready)}
         </p>
         <div
           className="h-[1px] w-16"
@@ -48,15 +64,11 @@ export function VerdictFeed({ claims, verdicts, checkingIds }: VerdictFeedProps)
   return (
     <div className="flex flex-col space-y-8">
       <AnimatePresence mode="popLayout">
-        {reversed.map((claim) => {
-          const result = verdicts.find((v) => v.claim_text === claim.claim_text);
-          const isChecking = checkingIds.has(claim.id);
-          return (
-            <motion.div key={claim.id} layout>
-              <ClaimCard claim={claim} result={result} isChecking={isChecking} />
-            </motion.div>
-          );
-        })}
+        {reversed.map((claim) => (
+          <motion.div key={claim.id} layout>
+            <ClaimCard claim={claim} />
+          </motion.div>
+        ))}
       </AnimatePresence>
     </div>
   );

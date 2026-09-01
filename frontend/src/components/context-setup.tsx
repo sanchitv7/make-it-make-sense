@@ -6,8 +6,7 @@ import { motion } from "framer-motion";
 import { Landmark, Newspaper, MessageSquare, Mic2, ArrowRight } from "lucide-react";
 import type { ContextPreset, ContextPresetOption } from "@/types";
 import { useAuth } from "@/components/auth-provider";
-import { apiFetch } from "@/lib/api";
-import { isTrialUsedDetail } from "@/lib/trial";
+import { ListenPreflight, MicDeniedError, TrialUsedError } from "@/lib/listen-preflight";
 
 const PRESETS: (ContextPresetOption & { icon: React.ReactNode })[] = [
   {
@@ -72,31 +71,24 @@ export function ContextSetup({ onTrialUsed }: ContextSetupProps) {
     if (!selected || !accessToken) return;
     setIsLoading(true);
     try {
-      const res = await apiFetch("/api/session", accessToken, {
-        method: "POST",
-        body: JSON.stringify({
-          context_preset: selected,
-          context_detail: contextDetail || null,
-        }),
+      const { sessionId } = await ListenPreflight.arm({
+        preset: selected,
+        contextDetail,
+        accessToken,
       });
-      if (!res.ok) {
-        const body: unknown = await res.json().catch(() => null);
-        const detail =
-          body && typeof body === "object" && "detail" in body
-            ? (body as { detail: unknown }).detail
-            : null;
-        if (res.status === 403 && isTrialUsedDetail(detail)) {
-          onTrialUsed?.();
-          setIsLoading(false);
-          return;
-        }
-        throw new Error("Failed to create session");
-      }
-      const { session_id } = await res.json();
       const params = new URLSearchParams({ preset: selected });
       if (contextDetail) params.set("context", contextDetail);
-      router.push(`/session/${session_id}?${params.toString()}`);
+      router.push(`/session/${sessionId}?${params.toString()}`);
     } catch (err) {
+      if (err instanceof TrialUsedError) {
+        onTrialUsed?.();
+        setIsLoading(false);
+        return;
+      }
+      if (err instanceof MicDeniedError) {
+        setIsLoading(false);
+        return;
+      }
       console.error(err);
       setIsLoading(false);
     }

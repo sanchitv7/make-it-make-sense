@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Verdict } from "@/types";
-import type { TranscriptSegment } from "@/hooks/use-gemini-live";
+
+type TranscriptSegment =
+  | { type: "text"; id: string; text: string }
+  | { type: "claim"; id: string; claimId: string; text: string };
 
 interface ClaimVerdict {
   claimId: string;

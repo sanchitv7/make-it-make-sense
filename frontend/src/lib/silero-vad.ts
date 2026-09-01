@@ -44,14 +44,6 @@ export function applySpeechEnd(): SpeechFlushState {
   return { speaking: false, speechStartedAtMs: null };
 }
 
-/** Open a turn as soon as Silero starts listening — do not wait for onSpeechStart. */
-export function beginListening(nowMs: number): { event: SileroVadEvent; state: SpeechFlushState } {
-  return {
-    event: "speech_start",
-    state: applySpeechStart({ speaking: false, speechStartedAtMs: null }, nowMs),
-  };
-}
-
 export interface SileroVadHandle {
   start: () => Promise<void>;
   pause: () => Promise<void>;
@@ -139,9 +131,6 @@ export async function createSileroVad(options: CreateSileroVadOptions): Promise<
 
   return {
     start: async () => {
-      const opened = beginListening(now());
-      flushState = opened.state;
-      emit(opened.event);
       startFlushTimer();
       await micVad.start();
     },

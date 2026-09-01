@@ -9,13 +9,6 @@ export interface ContextPresetOption {
   description: string;
 }
 
-export interface DetectedClaim {
-  id: string;
-  claim_text: string;
-  timestamp_seconds: number;
-  context?: string;
-}
-
 export interface FactCheckResult {
   claim_text: string;
   timestamp_seconds: number;
@@ -85,4 +78,9 @@ export interface AccountStatus {
   is_anonymous: boolean;
   trial_used: boolean;
   trial_duration_seconds: number;
+}
+
+export interface CreateSessionResponse {
+  session_id: string;
+  started_at: string;
 }
