@@ -38,7 +38,6 @@ const previewClaims: Claim[] = [
   },
 ];
 
-/** Local-only page for UI demos and screen recordings. Not linked in the app. */
 export default function FlowPreviewPage() {
   const [exitOpen, setExitOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -66,11 +65,20 @@ export default function FlowPreviewPage() {
       </div>
       <SessionExitDialog
         open={exitOpen}
-        onClose={() => setExitOpen(false)}
-        onEndAndGoHome={() => setExitOpen(false)}
-        onResume={() => {
-          setIsPaused(false);
-          setExitOpen(false);
+        onChoice={(choice) => {
+          switch (choice.kind) {
+            case "see-the-verdict":
+              setExitOpen(false);
+              return;
+            case "keep-listening":
+              setIsPaused(false);
+              setExitOpen(false);
+              return;
+            default: {
+              const _exhaustive: never = choice;
+              return _exhaustive;
+            }
+          }
         }}
       />
     </div>

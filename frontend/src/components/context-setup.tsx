@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { Landmark, Newspaper, MessageSquare, Mic2, ArrowRight } from "lucide-react";
 import type { ContextPreset, ContextPresetOption } from "@/types";
 import { useAuth } from "@/components/auth-provider";
-import { ListenPreflight, MicDeniedError, TrialUsedError } from "@/lib/listen-preflight";
+import { interpretListenStartError, ListenPreflight } from "@/lib/listen-preflight";
 
 const PRESETS: (ContextPresetOption & { icon: React.ReactNode })[] = [
   {
@@ -66,9 +66,11 @@ export function ContextSetup({ onTrialUsed }: ContextSetupProps) {
   const [selected, setSelected] = useState<ContextPreset | null>(null);
   const [contextDetail, setContextDetail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [listenError, setListenError] = useState<string | null>(null);
 
   const handleStart = async () => {
     if (!selected || !accessToken) return;
+    setListenError(null);
     setIsLoading(true);
     try {
       const { sessionId } = await ListenPreflight.arm({
@@ -80,16 +82,23 @@ export function ContextSetup({ onTrialUsed }: ContextSetupProps) {
       if (contextDetail) params.set("context", contextDetail);
       router.push(`/session/${sessionId}?${params.toString()}`);
     } catch (err) {
-      if (err instanceof TrialUsedError) {
-        onTrialUsed?.();
-        setIsLoading(false);
-        return;
+      const failure = interpretListenStartError(err);
+      switch (failure.kind) {
+        case "trial-used":
+          onTrialUsed?.();
+          break;
+        case "mic-unusable":
+          setListenError(failure.message);
+          break;
+        case "failed":
+          console.error(err);
+          break;
+        default: {
+          const _exhaustive: never = failure;
+          return _exhaustive;
+        }
       }
-      if (err instanceof MicDeniedError) {
-        setIsLoading(false);
-        return;
-      }
-      console.error(err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -177,24 +186,35 @@ export function ContextSetup({ onTrialUsed }: ContextSetupProps) {
             }}
           />
 
-          <motion.button
-            whileHover={selected && !isLoading ? { x: 4 } : {}}
-            whileTap={selected && !isLoading ? { scale: 0.98 } : {}}
-            disabled={!selected || isLoading}
-            onClick={handleStart}
-            className="inline-flex h-14 w-full cursor-pointer items-center justify-center gap-3 text-sm font-[family:var(--font-display)] font-bold tracking-[0.2em] uppercase transition-colors duration-200 disabled:cursor-not-allowed"
-            style={{
-              borderRadius: 0,
-              backgroundColor: selected && !isLoading ? "var(--accent-red)" : "var(--bg-card)",
-              color: selected && !isLoading ? "#FFFFFF" : "var(--text-muted)",
-              border: "1px solid",
-              borderColor: selected && !isLoading ? "transparent" : "var(--border-subtle)",
-              opacity: !selected || isLoading ? 0.6 : 1,
-            }}
-          >
-            {isLoading ? "STARTING..." : "BEGIN LISTENING"}
-            {!isLoading && <ArrowRight size={16} strokeWidth={2} />}
-          </motion.button>
+          <div className="flex flex-col gap-3">
+            {listenError ? (
+              <p
+                role="alert"
+                className="text-sm font-[family:var(--font-body)] text-[var(--accent-red)]"
+              >
+                {listenError}
+              </p>
+            ) : null}
+
+            <motion.button
+              whileHover={selected && !isLoading ? { x: 4 } : {}}
+              whileTap={selected && !isLoading ? { scale: 0.98 } : {}}
+              disabled={!selected || isLoading}
+              onClick={handleStart}
+              className="inline-flex h-14 w-full cursor-pointer items-center justify-center gap-3 text-sm font-[family:var(--font-display)] font-bold tracking-[0.2em] uppercase transition-colors duration-200 disabled:cursor-not-allowed"
+              style={{
+                borderRadius: 0,
+                backgroundColor: selected && !isLoading ? "var(--accent-red)" : "var(--bg-card)",
+                color: selected && !isLoading ? "#FFFFFF" : "var(--text-muted)",
+                border: "1px solid",
+                borderColor: selected && !isLoading ? "transparent" : "var(--border-subtle)",
+                opacity: !selected || isLoading ? 0.6 : 1,
+              }}
+            >
+              {isLoading ? "STARTING..." : "BEGIN LISTENING"}
+              {!isLoading && <ArrowRight size={16} strokeWidth={2} />}
+            </motion.button>
+          </div>
         </motion.div>
       </motion.div>
     </div>

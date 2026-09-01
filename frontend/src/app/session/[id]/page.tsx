@@ -8,7 +8,14 @@ import { TopBar } from "@/components/top-bar";
 import { SessionExitDialog } from "@/components/session-exit-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
-import { anonymousSessionLoadAction, trialRemainingSeconds } from "@/lib/trial";
+import {
+  anonymousSessionLoadAction,
+  trialClockForLive,
+  trialPreviewCue,
+  trialRemainingSeconds,
+  type TrialPreviewCue,
+} from "@/lib/trial";
+import type { LiveExitChoice } from "@/lib/live-exit";
 import { markTrialVerdictAccess } from "@/lib/trial-verdict-access";
 import type { ContextPreset, SessionDetailResponse } from "@/types";
 
@@ -23,6 +30,7 @@ export default function SessionPage() {
 
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
   const [loadedStartedAt, setLoadedStartedAt] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const startedRef = useRef(false);
   const endingRef = useRef(false);
 
@@ -141,23 +149,22 @@ export default function SessionPage() {
   useEffect(() => {
     if (!isAnonymous || !startedAt) return;
     const tick = () => {
-      if (trialRemainingSeconds(startedAt) <= 0) void finishToSummary();
+      const now = Date.now();
+      setNowMs(now);
+      if (trialRemainingSeconds(startedAt, now) <= 0) void finishToSummary();
     };
     tick();
     const id = window.setInterval(tick, 250);
     return () => window.clearInterval(id);
   }, [isAnonymous, startedAt, finishToSummary]);
 
+  const trialClock = trialClockForLive({ isAnonymous, startedAt });
+  const trialCue: TrialPreviewCue = trialClock
+    ? trialPreviewCue(trialClock.startedAt, nowMs)
+    : { kind: "none" };
+
   const handleStop = async () => {
     await finishToSummary();
-  };
-
-  const handleGoHome = async () => {
-    if (endingRef.current) return;
-    endingRef.current = true;
-    setExitDialogOpen(false);
-    await endSessionCleanup();
-    router.push("/");
   };
 
   const handleTitleClick = () => {
@@ -165,6 +172,23 @@ export default function SessionPage() {
       live.pause();
     }
     setExitDialogOpen(true);
+  };
+
+  const handleExitChoice = (choice: LiveExitChoice) => {
+    switch (choice.kind) {
+      case "see-the-verdict":
+        setExitDialogOpen(false);
+        void finishToSummary();
+        return;
+      case "keep-listening":
+        setExitDialogOpen(false);
+        void live.resume();
+        return;
+      default: {
+        const _exhaustive: never = choice;
+        return _exhaustive;
+      }
+    }
   };
 
   const handleSignOut = async () => {
@@ -194,6 +218,7 @@ export default function SessionPage() {
         <TopBar
           ready={live.ready}
           claims={live.claims}
+          trialCue={trialCue}
           onPause={live.pause}
           onResume={() => void live.resume()}
           onStop={() => void handleStop()}
@@ -201,12 +226,7 @@ export default function SessionPage() {
           onTitleClick={handleTitleClick}
         />
       </div>
-      <SessionExitDialog
-        open={exitDialogOpen}
-        onClose={() => setExitDialogOpen(false)}
-        onEndAndGoHome={() => void handleGoHome()}
-        onResume={() => void live.resume()}
-      />
+      <SessionExitDialog open={exitDialogOpen} onChoice={handleExitChoice} />
       <div className="mx-auto w-full max-w-[900px] px-6 py-8 md:px-12">
         <div>
           <VerdictFeed claims={live.claims} ready={live.ready} />

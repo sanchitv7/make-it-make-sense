@@ -1,46 +1,29 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
+import { liveExitFromDialogSurface, type LiveExitChoice } from "@/lib/live-exit";
 
 interface SessionExitDialogProps {
   open: boolean;
-  onEndAndGoHome: () => void;
-  onResume: () => void;
-  onClose: () => void;
+  onChoice: (choice: LiveExitChoice) => void;
 }
 
 const actionButtonClassName =
   "h-11 cursor-pointer px-4 text-sm font-[family:var(--font-display)] font-bold tracking-[0.12em] uppercase transition-opacity hover:opacity-80 disabled:opacity-60";
 
-export function SessionExitDialog({
-  open,
-  onEndAndGoHome,
-  onResume,
-  onClose,
-}: SessionExitDialogProps) {
+export function SessionExitDialog({ open, onChoice }: SessionExitDialogProps) {
   const titleId = useId();
-  const [step, setStep] = useState<"end" | "resume">("end");
-
-  useEffect(() => {
-    if (open) setStep("end");
-  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onChoice(liveExitFromDialogSurface("dismiss"));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  const title = step === "end" ? "Leave this session?" : "Resume listening?";
-  const message =
-    step === "end"
-      ? "Do you want to end this session and go back home?"
-      : "Do you want to resume the session?";
+  }, [open, onChoice]);
 
   return (
     <AnimatePresence>
@@ -56,7 +39,7 @@ export function SessionExitDialog({
             aria-label="Close"
             className="absolute inset-0 cursor-pointer"
             style={{ backgroundColor: "rgba(12, 13, 16, 0.55)" }}
-            onClick={onClose}
+            onClick={() => onChoice(liveExitFromDialogSurface("dismiss"))}
           />
           <motion.div
             role="dialog"
@@ -74,7 +57,7 @@ export function SessionExitDialog({
           >
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => onChoice(liveExitFromDialogSurface("dismiss"))}
               className="absolute top-4 right-4 cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               aria-label="Close dialog"
             >
@@ -85,55 +68,29 @@ export function SessionExitDialog({
               id={titleId}
               className="mb-1 pr-8 text-2xl font-[family:var(--font-display)] text-[var(--text-primary)]"
             >
-              {title}
+              Leave this session?
             </h2>
             <p className="mb-6 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
-              {message}
+              This ends listening and shows The Verdict.
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              {step === "end" ? (
-                <>
-                  <button
-                    type="button"
-                    className={`${actionButtonClassName} flex-1 text-white`}
-                    style={{ backgroundColor: "#B91C1C" }}
-                    onClick={onEndAndGoHome}
-                  >
-                    Yes, go home
-                  </button>
-                  <button
-                    type="button"
-                    className={`${actionButtonClassName} flex-1 border border-[var(--border-subtle)] text-[var(--text-primary)]`}
-                    style={{ backgroundColor: "var(--bg-primary)" }}
-                    onClick={() => setStep("resume")}
-                  >
-                    No
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className={`${actionButtonClassName} flex-1 text-white`}
-                    style={{ backgroundColor: "var(--accent-red)" }}
-                    onClick={() => {
-                      onResume();
-                      onClose();
-                    }}
-                  >
-                    Yes, resume
-                  </button>
-                  <button
-                    type="button"
-                    className={`${actionButtonClassName} flex-1 border border-[var(--border-subtle)] text-[var(--text-primary)]`}
-                    style={{ backgroundColor: "var(--bg-primary)" }}
-                    onClick={onClose}
-                  >
-                    No, stay paused
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                className={`${actionButtonClassName} flex-1 text-white`}
+                style={{ backgroundColor: "#B91C1C" }}
+                onClick={() => onChoice(liveExitFromDialogSurface("primary"))}
+              >
+                See the verdict
+              </button>
+              <button
+                type="button"
+                className={`${actionButtonClassName} flex-1 border border-[var(--border-subtle)] text-[var(--text-primary)]`}
+                style={{ backgroundColor: "var(--bg-primary)" }}
+                onClick={() => onChoice(liveExitFromDialogSurface("secondary"))}
+              >
+                Keep listening
+              </button>
             </div>
           </motion.div>
         </motion.div>

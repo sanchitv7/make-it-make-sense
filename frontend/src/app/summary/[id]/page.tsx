@@ -14,6 +14,7 @@ import { VerdictProportionBar } from "@/components/verdict-proportion-bar";
 import { apiFetch } from "@/lib/api";
 import { getCachedSession, loadSession, setCachedSession } from "@/lib/session-cache";
 import { hasTrialVerdictAccess } from "@/lib/trial-verdict-access";
+import { CREATE_ACCOUNT_CTA } from "@/lib/auth-copy";
 import { PRESET_LABELS, VERDICT_CONFIG } from "@/lib/verdict-config";
 
 const BLURB_POLL_MS = 1500;
@@ -184,7 +185,9 @@ export default function SummaryPage() {
 
               {showContent && (
                 <>
-                  {isAnonymous ? <TrialConvertBanner /> : null}
+                  {isAnonymous ? (
+                    <TrialConvertBanner onCreateAccount={() => setAuthOpen(true)} />
+                  ) : null}
                   <AnimatePresence>
                     {showBlurbBlock && (
                       <motion.div
@@ -339,7 +342,7 @@ export default function SummaryPage() {
                       className="h-14 cursor-pointer bg-[var(--accent-red)] text-xs font-[family:var(--font-mono)] tracking-widest text-white uppercase"
                       style={{ borderRadius: 0 }}
                     >
-                      {isAnonymous ? "CREATE ACCOUNT" : "NEW SESSION"}
+                      {isAnonymous ? CREATE_ACCOUNT_CTA : "NEW SESSION"}
                     </motion.button>
                   </footer>
                 </>
