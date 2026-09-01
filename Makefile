@@ -1,4 +1,4 @@
-.PHONY: install fmt lint typecheck test build smoke-backend check hooks sync-main
+.PHONY: install fmt lint typecheck test build smoke-backend check hooks sync-main dev-backend
 
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 BACKEND := $(ROOT)/backend
@@ -53,6 +53,10 @@ build:
 
 smoke-backend:
 	cd $(BACKEND) && $(BACKEND_PYTHON) -c "import main; import fact_check; import source_filter; import models; import prompts; import supabase_client"
+
+# Local API with a short reload drain so WatchFiles cannot wedge on Gemini tasks.
+dev-backend:
+	cd $(BACKEND) && .venv/bin/uvicorn main:app --reload --host 127.0.0.1 --port 8000 --timeout-graceful-shutdown 1
 
 check:
 	BACKEND_PYTHON=$(BACKEND_PYTHON) $(ROOT)/scripts/check.sh

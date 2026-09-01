@@ -23,8 +23,10 @@ Before `gh pr create`, update from `origin/main` (merge or rebase) so the branch
 
 ### Backend
 ```bash
-cd backend && source .venv/bin/activate && uvicorn main:app --reload
+cd backend && source .venv/bin/activate && uvicorn main:app --reload --timeout-graceful-shutdown 1
 ```
+Or `make dev-backend`. Without `--timeout-graceful-shutdown`, a reload can hang the API for a minute while in-flight Gemini tasks finish (Past Sessions stays on Loading…).
+
 Dependencies: `make install` or `cd backend && uv pip install -r requirements.txt -r requirements-dev.txt`
 
 Environment: copy `backend/.env.example` → `backend/.env` and fill in:
