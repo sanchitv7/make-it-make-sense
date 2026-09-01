@@ -22,7 +22,7 @@ def create_session(
     preset: str,
     user_id: str,
     context_detail: str | None = None,
-) -> str:
+) -> tuple[str, str]:
     data: dict = {
         "context_preset": preset,
         "user_id": user_id,
@@ -30,7 +30,8 @@ def create_session(
     if context_detail:
         data["context_detail"] = context_detail
     result = get_client().table("sessions").insert(data).execute()
-    return result.data[0]["id"]
+    row = result.data[0]
+    return row["id"], row["started_at"]
 
 
 def _fetch_session_row(session_id: str) -> dict:
