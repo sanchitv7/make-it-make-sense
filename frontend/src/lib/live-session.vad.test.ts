@@ -35,8 +35,36 @@ describe("live-session VAD wiring", () => {
     expect(sessionSource).not.toMatch(/server.?VAD/i);
   });
 
-  it("does not open a turn with beginListening", () => {
-    expect(sessionSource).not.toMatch(/beginListening/);
-    expect(sileroSource).not.toMatch(/beginListening/);
+  it("opens a Gemini turn when Silero starts instead of waiting for onSpeechStart", () => {
+    expect(sileroSource).toMatch(/beginListening/);
+    expect(sessionSource).toMatch(/activity_start/);
+  });
+
+  it("reopens the Gemini turn after speech_end so audio keeps flowing", () => {
+    const start = sessionSource.indexOf('case "speech_end"');
+    const end = sessionSource.indexOf('case "turn_flush"');
+    const handler = sessionSource.slice(start, end);
+    expect(handler.length).toBeGreaterThan(0);
+    expect(handler).toMatch(/sendActivity\("speech_end"\)/);
+    expect(handler).toMatch(/sendActivity\("speech_start"\)/);
+  });
+
+  it("cuts a forced turn_flush without painting the unfinished transcript remainder", () => {
+    const start = sessionSource.indexOf('case "turn_flush"');
+    const end = sessionSource.indexOf("private onTranscript");
+    const handler = sessionSource.slice(start, end);
+    expect(handler.length).toBeGreaterThan(0);
+    expect(handler).toMatch(/sendActivity\("speech_end"\)/);
+    expect(handler).toMatch(/sendActivity\("speech_start"\)/);
+    expect(handler).not.toMatch(/pullRemainderOnSpeechEnd/);
+    expect(handler).not.toMatch(/hearSentences/);
+  });
+
+  it("does not paint Claim cards from transcript hears — only report_claim promotes", () => {
+    expect(sessionSource).not.toMatch(/hearSentences/);
+    expect(sessionSource).not.toMatch(/type: "hear"/);
+    expect(sessionSource).not.toMatch(/retractUnconfirmed/);
+    expect(sessionSource).toMatch(/type: "promote"/);
+    expect(sessionSource).toMatch(/isEnglishClaimText/);
   });
 });

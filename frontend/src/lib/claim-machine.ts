@@ -8,6 +8,7 @@ import type {
   HeardClaim,
   ReduceResult,
 } from "@/types/claim";
+import { isEnglishClaimText } from "@/lib/claim-language";
 
 export const UNCONFIRMED_HEARD_MS = 8_000;
 
@@ -67,6 +68,7 @@ export function reduceClaims(claims: Claim[], action: ClaimAction): ReduceResult
     case "hear": {
       const trimmed = action.claim_text.trim();
       if (trimmed.length < MIN_HEARD_CHARS) return none(claims);
+      if (!isEnglishClaimText(trimmed)) return none(claims);
       const textKey = claimTextKey(trimmed);
       if (hasTextKey(claims, textKey)) return none(claims);
       const next: HeardClaim = {
@@ -81,6 +83,7 @@ export function reduceClaims(claims: Claim[], action: ClaimAction): ReduceResult
       return { claims: [...claims, next], effect: "none", promotedId: null };
     }
     case "promote": {
+      if (!isEnglishClaimText(action.reportText)) return none(claims);
       const textKey = claimTextKey(action.reportText);
       const heard = findHeardMatch(claims, textKey);
       if (heard) {

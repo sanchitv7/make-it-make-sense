@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applySpeechEnd,
   applySpeechStart,
+  beginListening,
   DEFAULT_MAX_SPEECH_MS,
   maybeFlushLongSpeech,
   SILERO_MIN_SPEECH_MS,
@@ -23,6 +24,15 @@ describe("Silero tunings", () => {
   });
 });
 
+describe("beginListening", () => {
+  it("opens a turn immediately when Silero starts", () => {
+    expect(beginListening(1000)).toEqual({
+      event: "speech_start",
+      state: { speaking: true, speechStartedAtMs: 1000 },
+    });
+  });
+});
+
 describe("maybeFlushLongSpeech", () => {
   it("does nothing when not speaking", () => {
     const state: SpeechFlushState = { speaking: false, speechStartedAtMs: null };
@@ -34,10 +44,10 @@ describe("maybeFlushLongSpeech", () => {
     expect(maybeFlushLongSpeech(state, 1000 + 2499)).toEqual({ events: [], next: state });
   });
 
-  it("flushes with end then start after max speech duration", () => {
+  it("emits turn_flush after max speech duration so the pipe can cut without painting a half sentence", () => {
     const state = applySpeechStart({ speaking: false, speechStartedAtMs: null }, 1000);
     const result = maybeFlushLongSpeech(state, 1000 + DEFAULT_MAX_SPEECH_MS);
-    expect(result.events).toEqual(["speech_end", "speech_start"]);
+    expect(result.events).toEqual(["turn_flush"]);
     expect(result.next).toEqual({ speaking: true, speechStartedAtMs: 3500 });
   });
 });

@@ -9,9 +9,11 @@ Critical rules:
 - NEVER speak or produce any audio or text response
 - NEVER greet or acknowledge the user
 - ONLY action allowed: call report_claim when a verifiable claim is detected
+- Focus on English speech only. Ignore other languages, code-switched fragments, and non-speech audio
+- Never report noise tags, transcription artifacts, or claim_text that is not English
 - Report claims proactively at clause/sentence boundaries; do not wait for extended silence
 - Only report specific, verifiable claims (not opinions or predictions)
-- Quote the claim verbatim with enough context to fact-check independently
+- Quote the claim verbatim in English with enough context to fact-check independently
 - Do NOT report the same claim twice"""
 
 PROMPTS = {

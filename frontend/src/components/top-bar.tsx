@@ -156,12 +156,15 @@ function countsFromClaims(claims: Claim[]): {
     MISLEADING: 0,
     UNVERIFIED: 0,
   };
+  let total = 0;
   for (const claim of claims) {
+    if (claim.phase === "heard") continue;
+    total += 1;
     if (claim.phase === "verdicted") {
       verdictCounts[claim.verdict] += 1;
     }
   }
-  return { total: claims.length, verdictCounts };
+  return { total, verdictCounts };
 }
 
 export function TopBar({

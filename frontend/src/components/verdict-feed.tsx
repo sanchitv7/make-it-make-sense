@@ -27,7 +27,11 @@ interface VerdictFeedProps {
 }
 
 export function VerdictFeed({ claims, ready }: VerdictFeedProps) {
-  if (claims.length === 0) {
+  // Live path only paints checking/verdicted; hide any leftover heard rows so
+  // unconfirmed transcript fragments never flash and disappear.
+  const visible = claims.filter((claim) => claim.phase !== "heard");
+
+  if (visible.length === 0) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -59,7 +63,7 @@ export function VerdictFeed({ claims, ready }: VerdictFeedProps) {
     );
   }
 
-  const reversed = [...claims].reverse();
+  const reversed = [...visible].reverse();
 
   return (
     <div className="flex flex-col space-y-8">

@@ -86,9 +86,6 @@ export default function SessionsPage() {
             >
               Sessions
             </h1>
-            <p className="mt-2 text-sm font-[family:var(--font-body)] text-[var(--text-secondary)]">
-              Ended listening runs with claims
-            </p>
           </header>
 
           {!authLoading && !hasAccount ? (
