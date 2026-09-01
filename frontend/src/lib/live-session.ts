@@ -1,6 +1,11 @@
 import type { ContextPreset, FactCheckResult, Verdict } from "@/types";
-import type { Claim, ClaimAction, ClaimId, ListenReady } from "@/types/claim";
-import { reduceClaims } from "@/lib/claim-machine";
+import type { Claim, ClaimAction, ClaimId, ListenReady, TurnId } from "@/types/claim";
+import { newClaimId, reduceClaims, UNCONFIRMED_HEARD_MS } from "@/lib/claim-machine";
+import {
+  pullCompletedSentences,
+  pullRemainderOnSpeechEnd,
+  type TranscriptTail,
+} from "@/lib/hear-sentences";
 import { isEnglishClaimText } from "@/lib/claim-language";
 import { apiFetch, backendUrl } from "@/lib/api";
 import { TRIAL_EXPIRED_DETAIL } from "@/lib/trial";
@@ -82,9 +87,12 @@ export class LiveSession {
   private connectInFlight: Promise<void> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private originMs = Date.now();
+  private turnSeq = 0;
+  private tail: TranscriptTail = { buffer: "", turnId: 0 as TurnId };
   private pad = new PcmPadBuffer();
   private outbound: Outgoing[] = [];
   private flushScheduled = false;
+  private retractTimers = new Map<number, ReturnType<typeof setTimeout>>();
 
   constructor(opts: LiveSessionOpts) {
     this.sessionId = opts.sessionId;
@@ -162,6 +170,7 @@ export class LiveSession {
     this.stopped = true;
     this.clearIdle();
     this.clearReconnect();
+    this.clearRetractTimers();
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.enqueue({ kind: "control", json: JSON.stringify({ type: "stop" }) });
       this.flushOutbound();
@@ -226,6 +235,21 @@ export class LiveSession {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+  }
+
+  private clearRetractTimers(): void {
+    for (const timer of this.retractTimers.values()) clearTimeout(timer);
+    this.retractTimers.clear();
+  }
+
+  private startNewTurn(): void {
+    this.turnSeq += 1;
+    this.tail = { buffer: "", turnId: this.turnSeq as TurnId };
+  }
+
+  private cutGeminiTurn(): void {
+    this.sendActivity("speech_end");
+    this.sendActivity("speech_start");
   }
 
   private enqueue(frame: Outgoing): void {
@@ -301,20 +325,21 @@ export class LiveSession {
   private onSileroEvent(event: SileroVadEvent): void {
     switch (event) {
       case "speech_start": {
+        this.startNewTurn();
         this.sendActivity("speech_start");
         return;
       }
       case "speech_end": {
-        // Real pause: close then reopen so Gemini can fire report_claim.
-        // Cards paint only on report_claim promote — never from transcript hears.
         this.sendActivity("speech_end");
+        const pulled = pullRemainderOnSpeechEnd(this.tail);
+        this.tail = pulled.next;
+        this.hearSentences(pulled.sentences);
+        this.startNewTurn();
         this.sendActivity("speech_start");
         return;
       }
       case "turn_flush": {
-        // Forced 2.5s cut: reopen Gemini so report_claim can fire without a pause.
-        this.sendActivity("speech_end");
-        this.sendActivity("speech_start");
+        this.cutGeminiTurn();
         return;
       }
       default: {
@@ -324,12 +349,39 @@ export class LiveSession {
     }
   }
 
-  private onTranscript(_text: string): void {
-    // Transcript is diagnostic only. Claim cards wait for report_claim.
+  private onTranscript(text: string): void {
+    const pulled = pullCompletedSentences(this.tail, text);
+    this.tail = pulled.next;
+    if (pulled.sentences.length === 0) return;
+    this.hearSentences(pulled.sentences);
+    this.cutGeminiTurn();
   }
 
   private onTurnComplete(): void {
-    // No unconfirmed heard cards to retract — promote is the only paint path.
+    const turnId = this.tail.turnId;
+    const existing = this.retractTimers.get(turnId);
+    if (existing != null) clearTimeout(existing);
+    this.retractTimers.set(
+      turnId,
+      setTimeout(() => {
+        this.retractTimers.delete(turnId);
+        this.dispatch({ type: "retractUnconfirmed", turnId, nowMs: Date.now() });
+      }, UNCONFIRMED_HEARD_MS),
+    );
+  }
+
+  private hearSentences(sentences: string[]): void {
+    const timestamp = Math.floor((Date.now() - this.originMs) / 1000);
+    for (const claim_text of sentences) {
+      this.dispatch({
+        type: "hear",
+        id: newClaimId(),
+        claim_text,
+        timestamp_seconds: timestamp,
+        turnId: this.tail.turnId,
+        nowMs: Date.now(),
+      });
+    }
   }
 
   private onReportClaim(event: Extract<LiveEvent, { type: "claim" }>): void {
@@ -385,10 +437,21 @@ export class LiveSession {
       }),
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Fact-check failed");
+        if (!res.ok) return null;
         return res.json();
       })
       .then((raw: unknown) => {
+        if (raw == null) {
+          this.dispatch({
+            type: "verdict",
+            id,
+            verdict: "UNVERIFIED",
+            verdict_summary: "Failed to fact-check this claim",
+            source_name: null,
+            source_url: null,
+          });
+          return;
+        }
         const parsed = parseFactCheckResult(raw);
         this.dispatch({
           type: "verdict",
