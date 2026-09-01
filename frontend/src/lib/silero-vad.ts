@@ -59,6 +59,24 @@ export function beginListening(nowMs: number): { event: SileroVadEvent; state: S
   };
 }
 
+export type VadTurnState = {
+  flush: SpeechFlushState;
+  confirmedSpeech: boolean;
+};
+
+export function applyVadMisfire(state: VadTurnState): {
+  events: SileroVadEvent[];
+  next: VadTurnState;
+} {
+  if (!state.confirmedSpeech || !state.flush.speaking) {
+    return { events: [], next: state };
+  }
+  return {
+    events: ["speech_end"],
+    next: { flush: applySpeechEnd(), confirmedSpeech: false },
+  };
+}
+
 export interface SileroVadHandle {
   start: () => Promise<void>;
   pause: () => Promise<void>;
@@ -84,7 +102,10 @@ export async function createSileroVad(options: CreateSileroVadOptions): Promise<
   const maxSpeechMs = options.maxSpeechMs ?? DEFAULT_MAX_SPEECH_MS;
   const now = options.now ?? (() => Date.now());
 
-  let flushState: SpeechFlushState = { speaking: false, speechStartedAtMs: null };
+  let turn: VadTurnState = {
+    flush: { speaking: false, speechStartedAtMs: null },
+    confirmedSpeech: false,
+  };
   let flushTimer: ReturnType<typeof setInterval> | null = null;
 
   const emit = (event: SileroVadEvent) => {
@@ -101,8 +122,8 @@ export async function createSileroVad(options: CreateSileroVadOptions): Promise<
   const startFlushTimer = () => {
     clearFlushTimer();
     flushTimer = setInterval(() => {
-      const { events, next } = maybeFlushLongSpeech(flushState, now(), maxSpeechMs);
-      flushState = next;
+      const { events, next } = maybeFlushLongSpeech(turn.flush, now(), maxSpeechMs);
+      turn = { ...turn, flush: next };
       for (const event of events) emit(event);
     }, 500);
   };
@@ -125,45 +146,46 @@ export async function createSileroVad(options: CreateSileroVadOptions): Promise<
     },
     resumeStream: async () => stream,
     onSpeechStart: () => {
-      const alreadySpeaking = flushState.speaking;
-      flushState = applySpeechStart(flushState, now());
+      const alreadySpeaking = turn.flush.speaking;
+      turn = {
+        flush: applySpeechStart(turn.flush, now()),
+        confirmedSpeech: true,
+      };
       if (!alreadySpeaking) {
         emit("speech_start");
       }
     },
     onSpeechEnd: () => {
-      flushState = applySpeechEnd();
+      turn = { flush: applySpeechEnd(), confirmedSpeech: false };
       emit("speech_end");
     },
     onVADMisfire: () => {
-      // Short blip — if we already signaled start, close the turn.
-      if (flushState.speaking) {
-        flushState = applySpeechEnd();
-        emit("speech_end");
-      }
+      const result = applyVadMisfire(turn);
+      turn = result.next;
+      for (const event of result.events) emit(event);
     },
   });
 
   return {
     start: async () => {
       const opened = beginListening(now());
-      flushState = opened.state;
+      turn = { flush: opened.state, confirmedSpeech: false };
       emit(opened.event);
       startFlushTimer();
       await micVad.start();
     },
     pause: async () => {
       clearFlushTimer();
-      if (flushState.speaking) {
-        flushState = applySpeechEnd();
+      if (turn.flush.speaking) {
+        turn = { flush: applySpeechEnd(), confirmedSpeech: false };
         emit("speech_end");
       }
       await micVad.pause();
     },
     destroy: async () => {
       clearFlushTimer();
-      if (flushState.speaking) {
-        flushState = applySpeechEnd();
+      if (turn.flush.speaking) {
+        turn = { flush: applySpeechEnd(), confirmedSpeech: false };
         emit("speech_end");
       }
       await micVad.destroy();

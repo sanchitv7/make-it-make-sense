@@ -6,14 +6,24 @@ from datetime import date
 
 from google import genai
 from google.genai import types
-from google.genai.errors import ClientError
+from google.genai.errors import ClientError, ServerError
 
 from models import FactCheckResponse, Verdict
 from prompts import FACT_CHECK_PROMPT
 from source_filter import is_blocked_url
 
 POOL_SIZE = 5
+FACT_CHECK_ATTEMPTS = 3
 _client_pool: asyncio.Queue = asyncio.Queue()
+
+
+def _unverified(claim_text: str, summary: str) -> FactCheckResponse:
+    return FactCheckResponse(
+        claim_text=claim_text,
+        timestamp_seconds=0,
+        verdict=Verdict.UNVERIFIED,
+        verdict_summary=summary,
+    )
 
 
 async def init_pool() -> None:
@@ -63,23 +73,38 @@ async def _do_fact_check(
         .replace("{surrounding_context}", surrounding_context)
     )
 
-    try:
-        response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                tools=[types.Tool(google_search=types.GoogleSearch())],
-            ),
-        )
-    except ClientError as e:
-        if e.code == 429:
-            return FactCheckResponse(
-                claim_text=claim_text,
-                timestamp_seconds=0,
-                verdict=Verdict.UNVERIFIED,
-                verdict_summary="Fact-check quota exceeded — please try again later.",
+    response = None
+    for attempt in range(FACT_CHECK_ATTEMPTS):
+        try:
+            response = await client.aio.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    tools=[types.Tool(google_search=types.GoogleSearch())],
+                ),
             )
-        raise
+            break
+        except ClientError as e:
+            if e.code == 429:
+                return _unverified(
+                    claim_text,
+                    "Fact-check quota exceeded — please try again later.",
+                )
+            raise
+        except ServerError as e:
+            if e.code != 503:
+                raise
+            if attempt + 1 >= FACT_CHECK_ATTEMPTS:
+                return _unverified(
+                    claim_text,
+                    "Fact-check unavailable due to high demand — please try again later.",
+                )
+            await asyncio.sleep(0.4 * (2**attempt))
+    if response is None:
+        return _unverified(
+            claim_text,
+            "Fact-check unavailable due to high demand — please try again later.",
+        )
 
     # Collect text across all candidates/parts (model may stream multiple turns)
     raw = ""

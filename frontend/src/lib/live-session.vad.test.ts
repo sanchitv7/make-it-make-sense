@@ -54,17 +54,29 @@ describe("live-session VAD wiring", () => {
     const end = sessionSource.indexOf("private onTranscript");
     const handler = sessionSource.slice(start, end);
     expect(handler.length).toBeGreaterThan(0);
-    expect(handler).toMatch(/sendActivity\("speech_end"\)/);
-    expect(handler).toMatch(/sendActivity\("speech_start"\)/);
+    expect(handler).toMatch(/cutGeminiTurn/);
+    expect(sessionSource).toMatch(
+      /private cutGeminiTurn[\s\S]*sendActivity\("speech_end"\)[\s\S]*sendActivity\("speech_start"\)/,
+    );
     expect(handler).not.toMatch(/pullRemainderOnSpeechEnd/);
     expect(handler).not.toMatch(/hearSentences/);
   });
 
-  it("does not paint Claim cards from transcript hears — only report_claim promotes", () => {
-    expect(sessionSource).not.toMatch(/hearSentences/);
-    expect(sessionSource).not.toMatch(/type: "hear"/);
-    expect(sessionSource).not.toMatch(/retractUnconfirmed/);
+  it("paints heard cards from completed transcript sentences, then promotes on report_claim", () => {
+    expect(sessionSource).toMatch(/hearSentences/);
+    expect(sessionSource).toMatch(/type: "hear"/);
+    expect(sessionSource).toMatch(/pullCompletedSentences/);
+    expect(sessionSource).toMatch(/retractUnconfirmed/);
     expect(sessionSource).toMatch(/type: "promote"/);
-    expect(sessionSource).toMatch(/isEnglishClaimText/);
+    const transcript = sessionSource.slice(
+      sessionSource.indexOf("private onTranscript"),
+      sessionSource.indexOf("private onTurnComplete"),
+    );
+    expect(transcript).toMatch(/hearSentences/);
+    expect(sessionSource).not.toMatch(/throw new Error\("Fact-check failed"\)/);
+  });
+
+  it("resumes AudioContext after the async WS handshake so the worklet can emit PCM", () => {
+    expect(sessionSource).toMatch(/audioCtx\.resume\(/);
   });
 });
