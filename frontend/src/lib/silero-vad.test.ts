@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applySpeechEnd,
   applySpeechStart,
+  beginListening,
   DEFAULT_MAX_SPEECH_MS,
   maybeFlushLongSpeech,
   SILERO_MIN_SPEECH_MS,
@@ -20,6 +21,15 @@ describe("Silero tunings", () => {
     expect(SILERO_MIN_SPEECH_MS).toBe(250);
     expect(SILERO_PRE_SPEECH_PAD_MS).toBe(300);
     expect(DEFAULT_MAX_SPEECH_MS).toBe(2500);
+  });
+});
+
+describe("beginListening", () => {
+  it("opens a turn immediately when Silero starts", () => {
+    expect(beginListening(1000)).toEqual({
+      event: "speech_start",
+      state: { speaking: true, speechStartedAtMs: 1000 },
+    });
   });
 });
 
