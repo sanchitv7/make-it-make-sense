@@ -36,6 +36,7 @@ class CreateSessionRequest(BaseModel):
 
 class CreateSessionResponse(BaseModel):
     session_id: str
+    started_at: datetime
 
 
 class ClaimDetail(BaseModel):

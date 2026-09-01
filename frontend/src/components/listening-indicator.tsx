@@ -1,13 +1,13 @@
 "use client";
 
 import { motion, type TargetAndTransition } from "framer-motion";
+import type { ListenReady } from "@/types/claim";
 
 interface ListeningIndicatorProps {
-  isConnected: boolean;
-  isPaused: boolean;
+  ready: ListenReady;
 }
 
-export function ListeningIndicator({ isConnected, isPaused }: ListeningIndicatorProps) {
+export function ListeningIndicator({ ready }: ListeningIndicatorProps) {
   const getLineStyles = (): {
     color: string;
     opacity: number;
@@ -16,28 +16,39 @@ export function ListeningIndicator({ isConnected, isPaused }: ListeningIndicator
     backgroundSize?: string;
     glow?: string;
   } => {
-    if (!isConnected) {
-      return { color: "var(--text-muted)", opacity: 0.3, animate: {} };
+    switch (ready.status) {
+      case "offline":
+        return { color: "var(--text-muted)", opacity: 0.3, animate: {} };
+      case "connecting":
+        return {
+          color: "var(--text-secondary)",
+          opacity: 0.5,
+          animate: {},
+        };
+      case "paused":
+        return {
+          color: "var(--accent-amber)",
+          opacity: 0.6,
+          animate: {},
+          glow: "0 0 8px rgba(251,191,36,0.4)",
+        };
+      case "listening":
+        return {
+          color: "var(--accent-red)",
+          opacity: 1,
+          animate: {
+            backgroundPosition: ["0% 50%", "200% 50%"],
+            transition: { duration: 3, repeat: Infinity, ease: "linear" },
+          },
+          backgroundImage: `linear-gradient(90deg, transparent, rgba(185, 28, 28, 1), rgba(185, 28, 28, 0.9), transparent)`,
+          backgroundSize: "200% 100%",
+          glow: "0 0 10px rgba(185,28,28,0.5)",
+        };
+      default: {
+        const _exhaustive: never = ready;
+        return _exhaustive;
+      }
     }
-    if (isPaused) {
-      return {
-        color: "var(--accent-amber)",
-        opacity: 0.6,
-        animate: {},
-        glow: "0 0 8px rgba(251,191,36,0.4)",
-      };
-    }
-    return {
-      color: "var(--accent-red)",
-      opacity: 1,
-      animate: {
-        backgroundPosition: ["0% 50%", "200% 50%"],
-        transition: { duration: 3, repeat: Infinity, ease: "linear" },
-      },
-      backgroundImage: `linear-gradient(90deg, transparent, rgba(185, 28, 28, 1), rgba(185, 28, 28, 0.9), transparent)`,
-      backgroundSize: "200% 100%",
-      glow: "0 0 10px rgba(185,28,28,0.5)",
-    };
   };
 
   const styles = getLineStyles();

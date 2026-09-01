@@ -152,34 +152,97 @@ async def live_ws(
             await websocket.send_text(json.dumps({"setupComplete": {}}))
 
             async def browser_to_gemini():
-                try:
-                    while True:
-                        data = json.loads(await websocket.receive_text())
-                        if data.get("type") == "audio":
-                            await session.send_realtime_input(
-                                audio=types.Blob(
-                                    data=base64.b64decode(data["data"]),
-                                    mime_type="audio/pcm;rate=16000",
-                                )
+                incoming: asyncio.Queue[dict] = asyncio.Queue()
+                pending_control: asyncio.Queue[dict] = asyncio.Queue()
+                pending_audio: asyncio.Queue[dict] = asyncio.Queue(maxsize=48)
+
+                async def read_browser() -> None:
+                    try:
+                        while True:
+                            data = json.loads(await websocket.receive_text())
+                            await incoming.put(data)
+                    except Exception as e:
+                        logger.info("Browser-to-Gemini reader ended: %s", e)
+                        await incoming.put({"type": "stop"})
+
+                async def dispatch(data: dict) -> bool:
+                    kind = data.get("type")
+                    if kind == "stop":
+                        return False
+                    if kind == "audio":
+                        await session.send_realtime_input(
+                            audio=types.Blob(
+                                data=base64.b64decode(data["data"]),
+                                mime_type="audio/pcm;rate=16000",
                             )
-                        elif data.get("type") == "activity_start":
-                            await session.send_realtime_input(activity_start=types.ActivityStart())
-                        elif data.get("type") == "activity_end":
-                            await session.send_realtime_input(activity_end=types.ActivityEnd())
-                        elif data.get("type") == "tool_response":
-                            responses = [
-                                types.FunctionResponse(
-                                    id=fr["id"], name=fr["name"], response=fr["response"]
-                                )
-                                for fr in data.get("functionResponses", [])
-                                if fr.get("id")
-                            ]
-                            if responses:
-                                await session.send_tool_response(function_responses=responses)
-                        elif data.get("type") == "stop":
-                            break
-                except Exception as e:
-                    logger.info("Browser-to-Gemini ended: %s", e)
+                        )
+                        return True
+                    if kind == "activity_start":
+                        await session.send_realtime_input(activity_start=types.ActivityStart())
+                        return True
+                    if kind == "activity_end":
+                        await session.send_realtime_input(activity_end=types.ActivityEnd())
+                        return True
+                    if kind == "tool_response":
+                        responses = [
+                            types.FunctionResponse(
+                                id=fr["id"], name=fr["name"], response=fr["response"]
+                            )
+                            for fr in data.get("functionResponses", [])
+                            if fr.get("id")
+                        ]
+                        if responses:
+                            await session.send_tool_response(function_responses=responses)
+                        return True
+                    return True
+
+                def bucket(data: dict) -> None:
+                    kind = data.get("type")
+                    if kind == "audio":
+                        if pending_audio.full():
+                            try:
+                                pending_audio.get_nowait()
+                            except asyncio.QueueEmpty:
+                                pass
+                        try:
+                            pending_audio.put_nowait(data)
+                        except asyncio.QueueFull:
+                            pass
+                        return
+                    try:
+                        pending_control.put_nowait(data)
+                    except asyncio.QueueFull:
+                        pass
+
+                async def send_to_gemini() -> None:
+                    try:
+                        while True:
+                            if pending_control.empty() and pending_audio.empty():
+                                bucket(await incoming.get())
+                            while True:
+                                try:
+                                    bucket(incoming.get_nowait())
+                                except asyncio.QueueEmpty:
+                                    break
+                            if not pending_control.empty():
+                                data = pending_control.get_nowait()
+                                if not await dispatch(data):
+                                    return
+                            elif not pending_audio.empty():
+                                data = pending_audio.get_nowait()
+                                if not await dispatch(data):
+                                    return
+                    except Exception as e:
+                        logger.info("Browser-to-Gemini sender ended: %s", e)
+
+                reader = asyncio.create_task(read_browser())
+                sender = asyncio.create_task(send_to_gemini())
+                _done, pending = await asyncio.wait(
+                    {reader, sender},
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for task in pending:
+                    task.cancel()
 
             async def gemini_to_browser():
                 try:
@@ -268,12 +331,12 @@ async def create_session(
         session_count = supabase_client.count_sessions_for_user(principal.user_id)
         if is_trial_used(is_anonymous=principal.is_anonymous, session_count=session_count):
             raise HTTPException(status_code=403, detail=TRIAL_USED_DETAIL)
-        session_id = supabase_client.create_session(
+        session_id, started_at = supabase_client.create_session(
             preset=request.context_preset,
             user_id=principal.user_id,
             context_detail=request.context_detail,
         )
-        return CreateSessionResponse(session_id=session_id)
+        return CreateSessionResponse(session_id=session_id, started_at=started_at)
     except HTTPException:
         raise
     except Exception as e:

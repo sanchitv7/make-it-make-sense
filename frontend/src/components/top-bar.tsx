@@ -13,6 +13,7 @@ import {
   Pause,
   Radio,
 } from "lucide-react";
+import type { Claim, ListenReady } from "@/types/claim";
 import type { Verdict } from "@/types";
 import { ListeningIndicator } from "@/components/listening-indicator";
 import { AccountChip } from "@/components/account-chip";
@@ -21,10 +22,8 @@ import { accountFullNameFromMetadata } from "@/lib/account-display-name";
 import { headerAuthControlClassName } from "@/lib/header-auth-control";
 
 interface TopBarProps {
-  isConnected: boolean;
-  isPaused: boolean;
-  verdictCounts: Record<Verdict, number>;
-  totalClaims: number;
+  ready: ListenReady;
+  claims: Claim[];
   onPause: () => void;
   onResume: () => void;
   onStop: () => void;
@@ -60,41 +59,46 @@ function ElapsedTime({ elapsed }: { elapsed: number }) {
   );
 }
 
-function LiveBadge({ isConnected, isPaused }: { isConnected: boolean; isPaused: boolean }) {
-  if (!isConnected) {
-    return (
-      <span className="text-xs font-bold tracking-widest text-[var(--text-muted)] uppercase">
-        OFFLINE
-      </span>
-    );
+function LiveBadge({ ready }: { ready: ListenReady }) {
+  switch (ready.status) {
+    case "offline":
+      return (
+        <span className="text-xs font-bold tracking-widest text-[var(--text-muted)] uppercase">
+          OFFLINE
+        </span>
+      );
+    case "connecting":
+      return (
+        <span className="text-xs font-bold tracking-widest text-[var(--text-secondary)] uppercase">
+          CONNECTING
+        </span>
+      );
+    case "listening":
+      return (
+        <div className="flex items-center gap-1.5 text-xs font-bold md:text-sm">
+          <Radio size={12} className="animate-pulse text-[#B91C1C]" />
+          <span className="text-[#B91C1C]">LIVE</span>
+        </div>
+      );
+    case "paused":
+      return (
+        <div className="flex items-center gap-1.5 text-xs font-bold md:text-sm">
+          <Radio size={12} className="text-[var(--accent-amber)]" />
+          <span className="text-[var(--accent-amber)]">PAUSED</span>
+        </div>
+      );
+    default: {
+      const _exhaustive: never = ready;
+      return _exhaustive;
+    }
   }
-
-  return (
-    <div className="flex items-center gap-1.5 text-xs font-bold md:text-sm">
-      <Radio
-        size={12}
-        className={isPaused ? "text-[var(--accent-amber)]" : "animate-pulse text-[#B91C1C]"}
-      />
-      <span className={isPaused ? "text-[var(--accent-amber)]" : "text-[#B91C1C]"}>
-        {isPaused ? "PAUSED" : "LIVE"}
-      </span>
-    </div>
-  );
 }
 
-function LiveStatus({
-  isConnected,
-  isPaused,
-  elapsed,
-}: {
-  isConnected: boolean;
-  isPaused: boolean;
-  elapsed: number;
-}) {
+function LiveStatus({ ready, elapsed }: { ready: ListenReady; elapsed: number }) {
   return (
     <div className="flex items-center gap-3 font-[family:var(--font-mono)] tabular-nums">
-      <LiveBadge isConnected={isConnected} isPaused={isPaused} />
-      {isConnected ? (
+      <LiveBadge ready={ready} />
+      {ready.status !== "offline" ? (
         <span className="border-l border-[var(--border-subtle)] pl-3">
           <ElapsedTime elapsed={elapsed} />
         </span>
@@ -104,29 +108,29 @@ function LiveStatus({
 }
 
 function SessionControls({
-  isConnected,
-  isPaused,
+  ready,
   onPause,
   onResume,
   onStop,
 }: {
-  isConnected: boolean;
-  isPaused: boolean;
+  ready: ListenReady;
   onPause: () => void;
   onResume: () => void;
   onStop: () => void;
 }) {
+  const paused = ready.status === "paused";
+  const canToggle = ready.status === "listening" || ready.status === "paused";
   return (
     <div className="flex items-center gap-1 md:border-l md:border-[var(--border-active)] md:pl-4">
       <motion.button
         whileTap={{ scale: 0.98 }}
-        onClick={isPaused ? onResume : onPause}
-        disabled={!isConnected}
+        onClick={paused ? onResume : onPause}
+        disabled={!canToggle}
         className="flex h-8 w-8 cursor-pointer items-center justify-center border border-[var(--border-active)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--text-primary)] hover:text-[var(--bg-card)] disabled:cursor-not-allowed disabled:opacity-30"
-        aria-label={isPaused ? "Resume" : "Pause"}
+        aria-label={paused ? "Resume" : "Pause"}
         style={{ borderRadius: 0 }}
       >
-        {isPaused ? <Play size={16} strokeWidth={2} /> : <Pause size={16} strokeWidth={2} />}
+        {paused ? <Play size={16} strokeWidth={2} /> : <Pause size={16} strokeWidth={2} />}
       </motion.button>
       <motion.button
         whileTap={{ scale: 0.98 }}
@@ -142,11 +146,27 @@ function SessionControls({
   );
 }
 
+function countsFromClaims(claims: Claim[]): {
+  total: number;
+  verdictCounts: Record<Verdict, number>;
+} {
+  const verdictCounts: Record<Verdict, number> = {
+    TRUE: 0,
+    FALSE: 0,
+    MISLEADING: 0,
+    UNVERIFIED: 0,
+  };
+  for (const claim of claims) {
+    if (claim.phase === "verdicted") {
+      verdictCounts[claim.verdict] += 1;
+    }
+  }
+  return { total: claims.length, verdictCounts };
+}
+
 export function TopBar({
-  isConnected,
-  isPaused,
-  verdictCounts,
-  totalClaims,
+  ready,
+  claims,
   onPause,
   onResume,
   onStop,
@@ -156,24 +176,25 @@ export function TopBar({
 }: TopBarProps) {
   const { user } = useAuth();
   const [elapsed, setElapsed] = useState(0);
+  const { total: totalClaims, verdictCounts } = countsFromClaims(claims);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isConnected && !isPaused) {
+    if (ready.status === "listening") {
       interval = setInterval(() => {
         setElapsed((prev) => prev + 1);
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isConnected, isPaused]);
+  }, [ready.status]);
 
   useEffect(() => {
-    if (!isConnected) {
+    if (ready.status === "offline") {
       setElapsed(0);
     }
-  }, [isConnected]);
+  }, [ready.status]);
 
-  const hasVerdicts = Object.values(verdictCounts).some((count) => count > 0);
+  const showCounts = totalClaims > 0;
   const accountName =
     accountFullName || (user ? accountFullNameFromMetadata(user.user_metadata) : "");
 
@@ -190,14 +211,8 @@ export function TopBar({
           {accountName ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
         </div>
         <div className="flex items-center justify-between gap-3 px-4 pb-3">
-          <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
-          <SessionControls
-            isConnected={isConnected}
-            isPaused={isPaused}
-            onPause={onPause}
-            onResume={onResume}
-            onStop={onStop}
-          />
+          <LiveStatus ready={ready} elapsed={elapsed} />
+          <SessionControls ready={ready} onPause={onPause} onResume={onResume} onStop={onStop} />
         </div>
       </div>
 
@@ -207,19 +222,13 @@ export function TopBar({
         </div>
         <div className="flex shrink-0 items-center gap-8">
           {accountName ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
-          <LiveStatus isConnected={isConnected} isPaused={isPaused} elapsed={elapsed} />
-          <SessionControls
-            isConnected={isConnected}
-            isPaused={isPaused}
-            onPause={onPause}
-            onResume={onResume}
-            onStop={onStop}
-          />
+          <LiveStatus ready={ready} elapsed={elapsed} />
+          <SessionControls ready={ready} onPause={onPause} onResume={onResume} onStop={onStop} />
         </div>
       </div>
 
       <AnimatePresence>
-        {isConnected && hasVerdicts && (
+        {showCounts && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -296,7 +305,7 @@ export function TopBar({
           </motion.div>
         )}
       </AnimatePresence>
-      <ListeningIndicator isConnected={isConnected} isPaused={isPaused} />
+      <ListeningIndicator ready={ready} />
     </header>
   );
 }

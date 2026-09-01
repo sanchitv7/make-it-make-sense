@@ -2,8 +2,7 @@
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useGeminiLive } from "@/hooks/use-gemini-live";
-import { useFactCheck } from "@/hooks/use-fact-check";
+import { useLiveSession } from "@/hooks/use-live-session";
 import { VerdictFeed } from "@/components/verdict-feed";
 import { TopBar } from "@/components/top-bar";
 import { SessionExitDialog } from "@/components/session-exit-dialog";
@@ -11,7 +10,7 @@ import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
 import { anonymousSessionLoadAction, trialRemainingSeconds } from "@/lib/trial";
 import { markTrialVerdictAccess } from "@/lib/trial-verdict-access";
-import type { ContextPreset, DetectedClaim, SessionDetailResponse, Verdict } from "@/types";
+import type { ContextPreset, SessionDetailResponse } from "@/types";
 
 export default function SessionPage() {
   const params = useParams();
@@ -22,32 +21,27 @@ export default function SessionPage() {
   const preset = (searchParams.get("preset") || "podcast") as ContextPreset;
   const contextDetail = searchParams.get("context") || undefined;
 
-  const [claims, setClaims] = useState<DetectedClaim[]>([]);
   const [exitDialogOpen, setExitDialogOpen] = useState(false);
-  const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [loadedStartedAt, setLoadedStartedAt] = useState<string | null>(null);
   const startedRef = useRef(false);
   const endingRef = useRef(false);
-  const stopRef = useRef<() => void>(() => {});
 
-  const { verdicts, checkingIds, checkClaim } = useFactCheck({
+  const finishToSummaryRef = useRef<() => void>(() => {});
+
+  const live = useLiveSession({
     sessionId,
     preset,
-    speakerInfo: contextDetail,
     accessToken,
+    speakerInfo: contextDetail,
+    onTrialExpired: () => {
+      finishToSummaryRef.current();
+    },
   });
 
-  const onClaim = useCallback(
-    (claim: DetectedClaim) => {
-      setClaims((prev) => [...prev, claim]);
-      checkClaim(claim);
-    },
-    [checkClaim],
-  );
-
-  const checkingIdsRef = useRef(checkingIds);
-  useEffect(() => {
-    checkingIdsRef.current = checkingIds;
-  }, [checkingIds]);
+  const claimsRef = useRef(live.claims);
+  claimsRef.current = live.claims;
+  const stopRef = useRef(live.stop);
+  stopRef.current = live.stop;
 
   const accessTokenRef = useRef(accessToken);
   useEffect(() => {
@@ -58,7 +52,7 @@ export default function SessionPage() {
     stopRef.current();
     await new Promise<void>((resolve) => {
       const poll = () => {
-        if (checkingIdsRef.current.size === 0) return resolve();
+        if (!claimsRef.current.some((claim) => claim.phase === "checking")) return resolve();
         setTimeout(poll, 200);
       };
       poll();
@@ -77,21 +71,17 @@ export default function SessionPage() {
     if (endingRef.current) return;
     endingRef.current = true;
     await endSessionCleanup();
-    // One-time pass: anonymous visitors may see this Verdict now, not on a later return.
     if (isAnonymous) markTrialVerdictAccess(sessionId);
     router.push(`/summary/${sessionId}`);
   }, [endSessionCleanup, isAnonymous, router, sessionId]);
+  finishToSummaryRef.current = () => {
+    void finishToSummary();
+  };
 
-  const { isConnected, isPaused, start, stop, pause, resume } = useGeminiLive({
-    preset,
-    onClaim,
-    accessToken,
-    sessionId,
-    onTrialExpired: () => {
-      void finishToSummary();
-    },
-  });
-  stopRef.current = stop;
+  const startedAt = live.startedAt ?? loadedStartedAt;
+
+  const connectRef = useRef(live.connect);
+  connectRef.current = live.connect;
 
   useEffect(() => {
     if (authLoading) return;
@@ -101,6 +91,10 @@ export default function SessionPage() {
     }
     if (!accessToken || startedRef.current) return;
     startedRef.current = true;
+
+    if (live.startedAt) {
+      return;
+    }
 
     let cancelled = false;
     void (async () => {
@@ -119,8 +113,8 @@ export default function SessionPage() {
               router.replace("/");
               return;
             case "listen":
-              setStartedAt(session.started_at);
-              start();
+              setLoadedStartedAt(session.started_at);
+              connectRef.current();
               return;
             default: {
               const _exhaustive: never = action;
@@ -132,8 +126,8 @@ export default function SessionPage() {
           router.replace(`/summary/${sessionId}`);
           return;
         }
-        setStartedAt(session.started_at);
-        start();
+        setLoadedStartedAt(session.started_at);
+        connectRef.current();
       } catch {
         if (!cancelled) router.replace("/");
       }
@@ -142,7 +136,7 @@ export default function SessionPage() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user, accessToken, isAnonymous, sessionId, start, router]);
+  }, [authLoading, user, accessToken, isAnonymous, sessionId, router, live.startedAt]);
 
   useEffect(() => {
     if (!isAnonymous || !startedAt) return;
@@ -167,8 +161,8 @@ export default function SessionPage() {
   };
 
   const handleTitleClick = () => {
-    if (isConnected && !isPaused) {
-      pause();
+    if (live.ready.status === "listening") {
+      live.pause();
     }
     setExitDialogOpen(true);
   };
@@ -180,14 +174,6 @@ export default function SessionPage() {
     await signOut();
     router.replace("/");
   };
-
-  const verdictCounts: Record<Verdict, number> = {
-    TRUE: 0,
-    FALSE: 0,
-    MISLEADING: 0,
-    UNVERIFIED: 0,
-  };
-  for (const v of verdicts) verdictCounts[v.verdict]++;
 
   if (authLoading || !user) {
     return (
@@ -206,12 +192,10 @@ export default function SessionPage() {
     <div className="min-h-dvh" style={{ backgroundColor: "var(--bg-primary)" }}>
       <div className="sticky top-0 z-10">
         <TopBar
-          isConnected={isConnected}
-          isPaused={isPaused}
-          verdictCounts={verdictCounts}
-          totalClaims={claims.length}
-          onPause={pause}
-          onResume={resume}
+          ready={live.ready}
+          claims={live.claims}
+          onPause={live.pause}
+          onResume={() => void live.resume()}
           onStop={() => void handleStop()}
           onSignOut={() => void handleSignOut()}
           onTitleClick={handleTitleClick}
@@ -221,11 +205,11 @@ export default function SessionPage() {
         open={exitDialogOpen}
         onClose={() => setExitDialogOpen(false)}
         onEndAndGoHome={() => void handleGoHome()}
-        onResume={resume}
+        onResume={() => void live.resume()}
       />
       <div className="mx-auto w-full max-w-[900px] px-6 py-8 md:px-12">
         <div>
-          <VerdictFeed claims={claims} verdicts={verdicts} checkingIds={checkingIds} />
+          <VerdictFeed claims={live.claims} ready={live.ready} />
         </div>
       </div>
     </div>
