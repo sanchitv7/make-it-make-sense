@@ -5,6 +5,7 @@ import {
   authPendingConfirmMessage,
   splashCtaLabel,
   SPLASH_TRIAL_USED_HINT,
+  CREATE_ACCOUNT_CTA,
 } from "@/lib/auth-copy";
 
 describe("auth copy", () => {
@@ -32,5 +33,11 @@ describe("splash CTA", () => {
     expect(splashCtaLabel(false)).toBe("Begin");
     expect(splashCtaLabel(true)).toBe("Create account");
     expect(SPLASH_TRIAL_USED_HINT).toMatch(/this device already used/i);
+  });
+});
+
+describe("CREATE_ACCOUNT_CTA", () => {
+  it("labels convert as CREATE ACCOUNT", () => {
+    expect(CREATE_ACCOUNT_CTA).toBe("CREATE ACCOUNT");
   });
 });

@@ -3,6 +3,9 @@ import {
   anonymousSessionLoadAction,
   beginPreviewAction,
   isTrialUsedDetail,
+  trialClockForLive,
+  trialPreviewCue,
+  trialPreviewCueCopy,
   trialRemainingSeconds,
   TRIAL_DURATION_SECONDS,
   TRIAL_USED_DETAIL,
@@ -129,5 +132,57 @@ describe("anonymousSessionLoadAction", () => {
         remainingSeconds: 12,
       }),
     ).toEqual({ kind: "listen" });
+  });
+});
+
+describe("trialClockForLive", () => {
+  const startedAt = "2026-08-28T12:00:00.000Z";
+
+  it("is none for a permanent Account", () => {
+    expect(trialClockForLive({ isAnonymous: false, startedAt })).toBeUndefined();
+  });
+
+  it("is none when startedAt is missing", () => {
+    expect(trialClockForLive({ isAnonymous: true, startedAt: null })).toBeUndefined();
+  });
+});
+
+describe("trialPreviewCue", () => {
+  const startedAt = "2026-08-28T12:00:00.000Z";
+  const startMs = Date.parse(startedAt);
+
+  it("shows the opening label in the first five seconds", () => {
+    expect(trialPreviewCue(startedAt, startMs + 4_999)).toEqual({ kind: "opening-label" });
+  });
+
+  it("is none in the middle of the preview", () => {
+    expect(trialPreviewCue(startedAt, startMs + 20_000)).toEqual({ kind: "none" });
+  });
+
+  it("ceils remaining whole seconds in the last 15s", () => {
+    expect(trialPreviewCue(startedAt, startMs + (TRIAL_DURATION_SECONDS - 14.2) * 1000)).toEqual({
+      kind: "last-seconds",
+      remainingWholeSeconds: 15,
+    });
+  });
+
+  it("is none when remaining is 0", () => {
+    expect(trialPreviewCue(startedAt, startMs + TRIAL_DURATION_SECONDS * 1000)).toEqual({
+      kind: "none",
+    });
+  });
+});
+
+describe("trialPreviewCueCopy", () => {
+  it("returns null for none", () => {
+    expect(trialPreviewCueCopy({ kind: "none" })).toBeNull();
+  });
+
+  it("labels the opening of the one-minute preview", () => {
+    expect(trialPreviewCueCopy({ kind: "opening-label" })).toBe("One-minute preview");
+  });
+
+  it("shows remaining whole seconds", () => {
+    expect(trialPreviewCueCopy({ kind: "last-seconds", remainingWholeSeconds: 7 })).toBe("7s left");
   });
 });

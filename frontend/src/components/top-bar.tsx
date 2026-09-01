@@ -20,6 +20,7 @@ import { AccountChip } from "@/components/account-chip";
 import { useAuth } from "@/components/auth-provider";
 import { accountFullNameFromMetadata } from "@/lib/account-display-name";
 import { headerAuthControlClassName } from "@/lib/header-auth-control";
+import { trialPreviewCueCopy, type TrialPreviewCue } from "@/lib/trial";
 
 interface TopBarProps {
   ready: ListenReady;
@@ -29,7 +30,7 @@ interface TopBarProps {
   onStop: () => void;
   onSignOut: () => void;
   onTitleClick: () => void;
-  /** Preview-only account label so demos can show chrome without a live session. */
+  trialCue?: TrialPreviewCue;
   accountFullName?: string;
 }
 
@@ -94,13 +95,27 @@ function LiveBadge({ ready }: { ready: ListenReady }) {
   }
 }
 
-function LiveStatus({ ready, elapsed }: { ready: ListenReady; elapsed: number }) {
+function LiveStatus({
+  ready,
+  elapsed,
+  trialCue,
+}: {
+  ready: ListenReady;
+  elapsed: number;
+  trialCue?: TrialPreviewCue;
+}) {
+  const cueCopy = trialPreviewCueCopy(trialCue ?? { kind: "none" });
   return (
     <div className="flex items-center gap-3 font-[family:var(--font-mono)] tabular-nums">
       <LiveBadge ready={ready} />
       {ready.status !== "offline" ? (
         <span className="border-l border-[var(--border-subtle)] pl-3">
           <ElapsedTime elapsed={elapsed} />
+          {cueCopy ? (
+            <span className="ml-2 text-xs font-bold text-[var(--text-muted)] md:text-sm">
+              {cueCopy}
+            </span>
+          ) : null}
         </span>
       ) : null}
     </div>
@@ -175,6 +190,7 @@ export function TopBar({
   onStop,
   onSignOut,
   onTitleClick,
+  trialCue,
   accountFullName,
 }: TopBarProps) {
   const { user } = useAuth();
@@ -214,7 +230,7 @@ export function TopBar({
           {accountName ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
         </div>
         <div className="flex items-center justify-between gap-3 px-4 pb-3">
-          <LiveStatus ready={ready} elapsed={elapsed} />
+          <LiveStatus ready={ready} elapsed={elapsed} trialCue={trialCue} />
           <SessionControls ready={ready} onPause={onPause} onResume={onResume} onStop={onStop} />
         </div>
       </div>
@@ -225,7 +241,7 @@ export function TopBar({
         </div>
         <div className="flex shrink-0 items-center gap-8">
           {accountName ? <AccountChrome fullName={accountName} onSignOut={onSignOut} /> : null}
-          <LiveStatus ready={ready} elapsed={elapsed} />
+          <LiveStatus ready={ready} elapsed={elapsed} trialCue={trialCue} />
           <SessionControls ready={ready} onPause={onPause} onResume={onResume} onStop={onStop} />
         </div>
       </div>
