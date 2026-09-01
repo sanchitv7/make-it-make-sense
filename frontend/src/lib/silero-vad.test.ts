@@ -44,10 +44,10 @@ describe("maybeFlushLongSpeech", () => {
     expect(maybeFlushLongSpeech(state, 1000 + 2499)).toEqual({ events: [], next: state });
   });
 
-  it("flushes with end then start after max speech duration", () => {
+  it("emits turn_flush after max speech duration so the pipe can cut without painting a half sentence", () => {
     const state = applySpeechStart({ speaking: false, speechStartedAtMs: null }, 1000);
     const result = maybeFlushLongSpeech(state, 1000 + DEFAULT_MAX_SPEECH_MS);
-    expect(result.events).toEqual(["speech_end", "speech_start"]);
+    expect(result.events).toEqual(["turn_flush"]);
     expect(result.next).toEqual({ speaking: true, speechStartedAtMs: 3500 });
   });
 });

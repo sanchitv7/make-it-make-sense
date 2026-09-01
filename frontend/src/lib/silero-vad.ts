@@ -1,5 +1,12 @@
-/** Silero speech-activity events mapped to Gemini activity signals. */
-export type SileroVadEvent = "speech_start" | "speech_end";
+/**
+ * Silero speech-activity events.
+ * speech_start / speech_end map to Gemini activity signals.
+ * turn_flush cuts a long continuous turn without treating it as a real pause.
+ */
+export type SileroVadEvent = "speech_start" | "speech_end" | "turn_flush";
+
+/** Events that map 1:1 to Gemini activity_start / activity_end. */
+export type GeminiActivityEvent = "speech_start" | "speech_end";
 
 export interface SpeechFlushState {
   speaking: boolean;
@@ -17,7 +24,8 @@ export const SILERO_PRE_SPEECH_PAD_MS = 300;
 
 /**
  * Pure helper: if speech has been continuous longer than maxSpeechMs,
- * emit a forced turn flush (end then start) and reset the speech clock.
+ * emit turn_flush and reset the speech clock. Does not emit speech_end —
+ * callers must cut the Gemini turn without painting an unfinished remainder.
  */
 export function maybeFlushLongSpeech(
   state: SpeechFlushState,
@@ -31,7 +39,7 @@ export function maybeFlushLongSpeech(
     return { events: [], next: state };
   }
   return {
-    events: ["speech_end", "speech_start"],
+    events: ["turn_flush"],
     next: { speaking: true, speechStartedAtMs: nowMs },
   };
 }
@@ -67,7 +75,7 @@ export interface CreateSileroVadOptions {
 
 /**
  * Start Silero MicVAD on an existing mic stream (does not open a second mic).
- * Emits speech_start / speech_end for Gemini activity signals.
+ * Emits speech_start / speech_end / turn_flush for Gemini activity signals.
  *
  * Dynamic import: @ricky0123/vad-web pulls ONNX/WASM and must not load at SSR.
  */

@@ -18,3 +18,17 @@ def test_report_claim_tool_is_registered() -> None:
     decls = config.tools[0].function_declarations
     assert decls
     assert decls[0].name == "report_claim"
+
+
+def test_input_transcription_hints_english() -> None:
+    """Bias Live STT toward English so far-field audio does not jump scripts."""
+    config = build_live_connect_config("test instruction")
+    assert config.input_audio_transcription is not None
+    assert config.input_audio_transcription.language_codes == ["en-US"]
+
+
+def test_claim_detection_prompt_requires_english() -> None:
+    from prompts import PROMPTS
+
+    for name, prompt in PROMPTS.items():
+        assert "English" in prompt, name
