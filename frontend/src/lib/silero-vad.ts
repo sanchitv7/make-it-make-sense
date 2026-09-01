@@ -61,11 +61,9 @@ export function beginListening(nowMs: number): { event: SileroVadEvent; state: S
 
 export type VadTurnState = {
   flush: SpeechFlushState;
-  /** True after MicVAD onSpeechStart, not after synthetic beginListening. */
   confirmedSpeech: boolean;
 };
 
-/** Ignore early MicVAD misfires so beginListening keeps the 2.5s flush clock. */
 export function applyVadMisfire(state: VadTurnState): {
   events: SileroVadEvent[];
   next: VadTurnState;

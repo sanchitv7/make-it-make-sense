@@ -1,5 +1,3 @@
-"""Gemini 503 / high demand must not 500 the fact-check endpoint."""
-
 import asyncio
 from types import SimpleNamespace
 
