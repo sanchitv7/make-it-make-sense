@@ -75,4 +75,36 @@ describe("session-cache", () => {
     expect(getCachedSessionList()).toEqual(sessions);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("loadSessionList clears inflight after abort so a retry can fetch again", async () => {
+    const sessions = [sampleCard("c1")];
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce((_url: string, init?: RequestInit) => {
+        if (init?.signal?.aborted) {
+          return Promise.reject(new DOMException("Aborted", "AbortError"));
+        }
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"));
+          });
+        });
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ sessions }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout").mockReturnValue(AbortSignal.abort());
+
+    await expect(loadSessionList("token", { force: true })).rejects.toMatchObject({
+      name: "AbortError",
+    });
+    timeoutSpy.mockRestore();
+
+    const retried = await loadSessionList("token", { force: true });
+    expect(retried).toEqual(sessions);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
