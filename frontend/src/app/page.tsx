@@ -36,6 +36,8 @@ export default function Home() {
   const [trialUsed, setTrialUsed] = useState<boolean | null>(null);
   const [beginError, setBeginError] = useState<string | null>(null);
   const mintingAnonymousRef = useRef(false);
+  const pendingBeginRef = useRef(pendingBegin);
+  pendingBeginRef.current = pendingBegin;
 
   useEffect(() => {
     setScrollReady(true);
@@ -130,7 +132,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!pendingBegin) return;
+    if (!pendingBegin) {
+      mintingAnonymousRef.current = false;
+      return;
+    }
     const action = beginPreviewAction({
       authLoading: loading,
       hasAccount,
@@ -157,6 +162,10 @@ export default function Home() {
         mintingAnonymousRef.current = true;
         void (async () => {
           const { error } = await signInAnonymously();
+          if (!pendingBeginRef.current) {
+            mintingAnonymousRef.current = false;
+            return;
+          }
           if (error) {
             console.error("[Auth] Anonymous sign-in failed:", error);
             mintingAnonymousRef.current = false;
