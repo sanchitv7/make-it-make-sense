@@ -8,7 +8,7 @@ import { TopBar } from "@/components/top-bar";
 import { SessionExitDialog } from "@/components/session-exit-dialog";
 import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
-import { trialRemainingSeconds } from "@/lib/trial";
+import { anonymousSessionLoadAction, trialRemainingSeconds } from "@/lib/trial";
 import { markTrialVerdictAccess } from "@/lib/trial-verdict-access";
 import type { ContextPreset, SessionDetailResponse } from "@/types";
 
@@ -103,15 +103,30 @@ export default function SessionPage() {
         if (!res.ok) throw new Error("Failed to load session");
         const session = (await res.json()) as SessionDetailResponse;
         if (cancelled) return;
-        setLoadedStartedAt(session.started_at);
+        if (isAnonymous) {
+          const action = anonymousSessionLoadAction({
+            endedAt: session.ended_at,
+            remainingSeconds: trialRemainingSeconds(session.started_at),
+          });
+          switch (action.kind) {
+            case "home":
+              router.replace("/");
+              return;
+            case "listen":
+              setLoadedStartedAt(session.started_at);
+              connectRef.current();
+              return;
+            default: {
+              const _exhaustive: never = action;
+              return _exhaustive;
+            }
+          }
+        }
         if (session.ended_at) {
-          router.replace(isAnonymous ? "/" : `/summary/${sessionId}`);
+          router.replace(`/summary/${sessionId}`);
           return;
         }
-        if (isAnonymous && trialRemainingSeconds(session.started_at) <= 0) {
-          await finishToSummary();
-          return;
-        }
+        setLoadedStartedAt(session.started_at);
         connectRef.current();
       } catch {
         if (!cancelled) router.replace("/");
@@ -121,16 +136,7 @@ export default function SessionPage() {
     return () => {
       cancelled = true;
     };
-  }, [
-    authLoading,
-    user,
-    accessToken,
-    isAnonymous,
-    sessionId,
-    router,
-    finishToSummary,
-    live.startedAt,
-  ]);
+  }, [authLoading, user, accessToken, isAnonymous, sessionId, router, live.startedAt]);
 
   useEffect(() => {
     if (!isAnonymous || !startedAt) return;

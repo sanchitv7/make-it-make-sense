@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SplashHero } from "@/components/splash-hero";
 import { ContextSetup } from "@/components/context-setup";
 import { AuthModal, type AuthIntent, type AuthMode } from "@/components/auth-modal";
 import { SiteHeader } from "@/components/site-header";
 import { useAuth } from "@/components/auth-provider";
 import { apiFetch } from "@/lib/api";
+import { beginPreviewAction } from "@/lib/trial";
 import { clearTrialVerdictAccess } from "@/lib/trial-verdict-access";
 import type { AccountStatus } from "@/types";
 
@@ -34,6 +35,9 @@ export default function Home() {
   const [scrollReady, setScrollReady] = useState(false);
   const [trialUsed, setTrialUsed] = useState<boolean | null>(null);
   const [beginError, setBeginError] = useState<string | null>(null);
+  const mintingAnonymousRef = useRef(false);
+  const pendingBeginRef = useRef(pendingBegin);
+  pendingBeginRef.current = pendingBegin;
 
   useEffect(() => {
     setScrollReady(true);
@@ -128,41 +132,91 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!pendingBegin) return;
-    if (canListen) {
-      setPendingBegin(false);
-      requestAnimationFrame(() => {
-        setTimeout(scrollToSetup, 50);
-      });
+    if (!pendingBegin) {
+      mintingAnonymousRef.current = false;
       return;
     }
-    if (isAnonymous && trialUsed) {
-      setPendingBegin(false);
-      openTrialUsed();
+    const action = beginPreviewAction({
+      authLoading: loading,
+      hasAccount,
+      isAnonymous,
+      trialUsed,
+    });
+    switch (action.kind) {
+      case "listen":
+        setPendingBegin(false);
+        mintingAnonymousRef.current = false;
+        requestAnimationFrame(() => {
+          setTimeout(scrollToSetup, 50);
+        });
+        return;
+      case "open-trial-used":
+        setPendingBegin(false);
+        mintingAnonymousRef.current = false;
+        openTrialUsed();
+        return;
+      case "wait":
+        return;
+      case "create-anonymous": {
+        if (mintingAnonymousRef.current) return;
+        mintingAnonymousRef.current = true;
+        void (async () => {
+          const { error } = await signInAnonymously();
+          if (!pendingBeginRef.current) {
+            mintingAnonymousRef.current = false;
+            return;
+          }
+          if (error) {
+            console.error("[Auth] Anonymous sign-in failed:", error);
+            mintingAnonymousRef.current = false;
+            setPendingBegin(false);
+            setBeginError(
+              "Preview isn’t available right now. Create an account to start listening.",
+            );
+            openSignup();
+          }
+        })();
+        return;
+      }
+      default: {
+        const _exhaustive: never = action;
+        return _exhaustive;
+      }
     }
-  }, [pendingBegin, canListen, isAnonymous, trialUsed, openTrialUsed]);
+  }, [
+    pendingBegin,
+    loading,
+    hasAccount,
+    isAnonymous,
+    trialUsed,
+    openTrialUsed,
+    signInAnonymously,
+    openSignup,
+  ]);
 
-  const handleBeginClick = async () => {
+  const handleBeginClick = () => {
     setBeginError(null);
-    if (hasAccount || (isAnonymous && trialUsed === false)) {
-      scrollToSetup();
-      return;
-    }
-    if (isAnonymous && trialUsed) {
-      openTrialUsed();
-      return;
-    }
-    if (user && trialUsed === null) {
-      setPendingBegin(true);
-      return;
-    }
-    setPendingBegin(true);
-    const { error } = await signInAnonymously();
-    if (error) {
-      console.error("[Auth] Anonymous sign-in failed:", error);
-      setPendingBegin(false);
-      setBeginError("Preview isn’t available right now. Create an account to start listening.");
-      openSignup();
+    const action = beginPreviewAction({
+      authLoading: loading,
+      hasAccount,
+      isAnonymous,
+      trialUsed,
+    });
+    switch (action.kind) {
+      case "listen":
+        scrollToSetup();
+        return;
+      case "open-trial-used":
+        openTrialUsed();
+        return;
+      case "wait":
+      case "create-anonymous":
+        setPendingBegin(true);
+        return;
+      default: {
+        const _exhaustive: never = action;
+        return _exhaustive;
+      }
     }
   };
 
@@ -178,7 +232,7 @@ export default function Home() {
     <>
       <SiteHeader showBrandTitle={showHeaderBrand} onSignInClick={openSignIn} />
       <main>
-        <SplashHero onBeginClick={() => void handleBeginClick()} trialUsed={previewAlreadyUsed} />
+        <SplashHero onBeginClick={handleBeginClick} trialUsed={previewAlreadyUsed} />
         {beginError ? (
           <p
             className="fixed bottom-6 left-1/2 z-[70] max-w-md -translate-x-1/2 px-4 py-3 text-center text-sm font-[family:var(--font-body)] text-white shadow-lg"
