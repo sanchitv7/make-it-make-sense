@@ -67,4 +67,8 @@ describe("live-session VAD wiring", () => {
     expect(sessionSource).toMatch(/type: "promote"/);
     expect(sessionSource).toMatch(/isEnglishClaimText/);
   });
+
+  it("resumes AudioContext after the async WS handshake so the worklet can emit PCM", () => {
+    expect(sessionSource).toMatch(/audioCtx\.resume\(/);
+  });
 });

@@ -455,6 +455,10 @@ export class LiveSession {
 
     const audioCtx = new AudioContext({ sampleRate: 16000 });
     this.audioCtx = audioCtx;
+    // setupComplete is async; resume or the worklet stays suspended with no PCM.
+    if (audioCtx.state === "suspended") {
+      await audioCtx.resume();
+    }
     const source = audioCtx.createMediaStreamSource(stream);
 
     const workletCode = `

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applySpeechEnd,
   applySpeechStart,
+  applyVadMisfire,
   beginListening,
   DEFAULT_MAX_SPEECH_MS,
   maybeFlushLongSpeech,
@@ -57,5 +58,30 @@ describe("applySpeechStart / applySpeechEnd", () => {
     const started = applySpeechStart({ speaking: false, speechStartedAtMs: null }, 42);
     expect(started).toEqual({ speaking: true, speechStartedAtMs: 42 });
     expect(applySpeechEnd()).toEqual({ speaking: false, speechStartedAtMs: null });
+  });
+});
+
+describe("applyVadMisfire", () => {
+  it("does not kill a beginListening turn before MicVAD confirms speech", () => {
+    const opened = beginListening(1000).state;
+    const result = applyVadMisfire({ flush: opened, confirmedSpeech: false });
+    expect(result.events).toEqual([]);
+    expect(result.next.flush).toEqual(opened);
+    expect(result.next.confirmedSpeech).toBe(false);
+  });
+
+  it("still ends a turn after MicVAD confirmed real speech", () => {
+    const speaking = applySpeechStart({ speaking: false, speechStartedAtMs: null }, 1000);
+    const result = applyVadMisfire({ flush: speaking, confirmedSpeech: true });
+    expect(result.events).toEqual(["speech_end"]);
+    expect(result.next.flush).toEqual({ speaking: false, speechStartedAtMs: null });
+    expect(result.next.confirmedSpeech).toBe(false);
+  });
+
+  it("keeps the 2.5s flush clock alive after an early misfire", () => {
+    const opened = beginListening(1000).state;
+    const afterMisfire = applyVadMisfire({ flush: opened, confirmedSpeech: false }).next;
+    const flush = maybeFlushLongSpeech(afterMisfire.flush, 1000 + DEFAULT_MAX_SPEECH_MS);
+    expect(flush.events).toEqual(["turn_flush"]);
   });
 });
