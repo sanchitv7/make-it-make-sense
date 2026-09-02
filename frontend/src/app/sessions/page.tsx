@@ -40,6 +40,8 @@ export default function SessionsPage() {
   const { accessToken, loading: authLoading, hasAccount } = useAuth();
   const [sessions, setSessions] = useState<SessionCard[]>(() => getCachedSessionList() ?? []);
   const [listLoading, setListLoading] = useState(() => getCachedSessionList() === undefined);
+  const [listError, setListError] = useState<string | null>(null);
+  const [listReloadKey, setListReloadKey] = useState(0);
 
   useEffect(() => {
     if (authLoading) return;
@@ -53,23 +55,33 @@ export default function SessionsPage() {
     if (!hasAccount || !accessToken) {
       setSessions([]);
       setListLoading(false);
+      setListError(null);
       return;
     }
     let cancelled = false;
     const hadCache = getCachedSessionList() !== undefined;
     if (!hadCache) setListLoading(true);
+    setListError(null);
     loadSessionList(accessToken, { force: true })
       .then((data) => {
-        if (!cancelled) setSessions(data);
+        if (!cancelled) {
+          setSessions(data);
+          setListError(null);
+        }
       })
-      .catch(console.error)
+      .catch((err: unknown) => {
+        console.error(err);
+        if (!cancelled) {
+          setListError("Could not load sessions. The API may be restarting.");
+        }
+      })
       .finally(() => {
         if (!cancelled) setListLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [accessToken, authLoading, hasAccount]);
+  }, [accessToken, authLoading, hasAccount, listReloadKey]);
 
   return (
     <>
@@ -101,6 +113,19 @@ export default function SessionsPage() {
             <p className="text-sm font-[family:var(--font-body)] text-[var(--text-muted)]">
               Loading…
             </p>
+          ) : listError && sessions.length === 0 ? (
+            <div className="flex flex-col items-start gap-4">
+              <p className="text-sm font-[family:var(--font-body)] text-[var(--text-muted)]">
+                {listError}
+              </p>
+              <button
+                type="button"
+                className={secondaryLinkClassName}
+                onClick={() => setListReloadKey((n) => n + 1)}
+              >
+                Retry
+              </button>
+            </div>
           ) : sessions.length === 0 ? (
             <div className="flex flex-col items-start gap-4">
               <p className="text-lg font-[family:var(--font-display)] text-[var(--text-secondary)] italic">

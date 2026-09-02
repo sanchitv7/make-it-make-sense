@@ -128,8 +128,9 @@ make check
 ### 6. Start both services
 
 ```bash
-# Terminal 1 — Backend
-cd backend && source .venv/bin/activate && uvicorn main:app --reload
+# Terminal 1 — Backend (graceful timeout so reload does not wedge on Gemini tasks)
+cd backend && source .venv/bin/activate && uvicorn main:app --reload --timeout-graceful-shutdown 1
+# or: make dev-backend
 
 # Terminal 2 — Frontend
 cd frontend && npm run dev

@@ -61,6 +61,8 @@ export function prefetchSession(sessionId: string, accessToken: string): void {
   });
 }
 
+const LIST_FETCH_TIMEOUT_MS = 10_000;
+
 /** Fetch the sessions board; dedupe concurrent requests and cache the result. */
 export async function loadSessionList(
   accessToken: string,
@@ -69,7 +71,9 @@ export async function loadSessionList(
   if (!opts?.force && listCache) return listCache;
   if (listInflight) return listInflight;
 
-  listInflight = apiFetch("/api/sessions", accessToken)
+  listInflight = apiFetch("/api/sessions", accessToken, {
+    signal: AbortSignal.timeout(LIST_FETCH_TIMEOUT_MS),
+  })
     .then(async (res) => {
       if (!res.ok) throw new Error("Failed to load sessions");
       return res.json() as Promise<SessionListResponse>;
