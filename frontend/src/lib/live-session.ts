@@ -80,6 +80,7 @@ export class LiveSession {
   private audioCtx: AudioContext | null = null;
   private worklet: AudioWorkletNode | null = null;
   private silero: SileroVadHandle | null = null;
+  private sileroWarm: Promise<SileroVadHandle> | null = null;
   private turnOpen = false;
   private pcmLive = false;
   private stopped = true;
@@ -109,6 +110,7 @@ export class LiveSession {
   static connect(opts: LiveSessionOpts): LiveSession {
     const session = new LiveSession(opts);
     session.retain();
+    session.warmSilero();
     session.connect();
     return session;
   }
@@ -476,6 +478,16 @@ export class LiveSession {
   }
 
   private async teardownSilero(): Promise<void> {
+    const warm = this.sileroWarm;
+    this.sileroWarm = null;
+    if (warm) {
+      try {
+        const warmed = await warm;
+        await warmed.destroy();
+      } catch (err) {
+        console.error("[Live] Silero VAD warm destroy error:", err);
+      }
+    }
     const vad = this.silero;
     this.silero = null;
     if (!vad) return;
@@ -495,16 +507,62 @@ export class LiveSession {
     this.audioCtx = null;
   }
 
-  private async startSilero(ws: WebSocket, stream: MediaStream): Promise<void> {
-    await this.teardownSilero();
-    if (this.sileroAssets) await this.sileroAssets;
-    const vad = await createSileroVad({
-      stream,
-      onEvent: (event) => {
-        if (this.ws !== ws || this.stopped) return;
-        this.onSileroEvent(event);
-      },
+  private warmSilero(): void {
+    if (this.sileroWarm || this.silero || !this.mediaStream) return;
+    const stream = this.mediaStream;
+    const warmPromise = (async () => {
+      if (this.sileroAssets) await this.sileroAssets;
+      return createSileroVad({
+        stream,
+        onEvent: (event) => {
+          if (this.stopped || !this.ws) return;
+          this.onSileroEvent(event);
+        },
+      });
+    })();
+    this.sileroWarm = warmPromise;
+    void warmPromise.catch((err: unknown) => {
+      console.error("[Live] Silero VAD warm error:", err);
+      if (this.sileroWarm === warmPromise) this.sileroWarm = null;
     });
+  }
+
+  private async startSilero(ws: WebSocket, stream: MediaStream): Promise<void> {
+    const warmed = this.sileroWarm;
+    this.sileroWarm = null;
+    const previous = this.silero;
+    this.silero = null;
+    if (previous) {
+      try {
+        await previous.destroy();
+      } catch (err) {
+        console.error("[Live] Silero VAD destroy error:", err);
+      }
+    }
+    if (this.sileroAssets) await this.sileroAssets;
+    let vad: SileroVadHandle;
+    try {
+      vad =
+        warmed != null
+          ? await warmed
+          : await createSileroVad({
+              stream,
+              onEvent: (event) => {
+                if (this.ws !== ws || this.stopped) return;
+                this.onSileroEvent(event);
+              },
+            });
+    } catch (err) {
+      if (warmed == null) throw err;
+      console.error("[Live] Silero VAD warm failed; creating fresh:", err);
+      vad = await createSileroVad({
+        stream,
+        onEvent: (event) => {
+          if (this.ws !== ws || this.stopped) return;
+          this.onSileroEvent(event);
+        },
+      });
+    }
     this.silero = vad;
     await vad.start();
   }
@@ -518,7 +576,6 @@ export class LiveSession {
 
     const audioCtx = new AudioContext({ sampleRate: 16000 });
     this.audioCtx = audioCtx;
-    // setupComplete is async; resume or the worklet stays suspended with no PCM.
     if (audioCtx.state === "suspended") {
       await audioCtx.resume();
     }
@@ -574,6 +631,7 @@ export class LiveSession {
         this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: MIC_CONSTRAINTS });
       }
       if (this.stopped) return;
+      this.warmSilero();
 
       const params = new URLSearchParams({ preset: this.preset });
       const wsUrl = backendUrl(`/ws/live?${params.toString()}`).replace(/^http/, "ws");
@@ -770,6 +828,22 @@ function parseFactCheckResult(
   };
 }
 
+const SILERO_ASSET_URLS = [
+  "/vad/silero_vad_v5.onnx",
+  "/vad/ort-wasm-simd-threaded.wasm",
+  "/vad/ort-wasm-simd-threaded.mjs",
+  "/vad/vad.worklet.bundle.min.js",
+] as const;
+
+/** Prefetch vad-web + ONNX/WASM into the HTTP cache during Begin. */
 export function preloadSileroAssets(): Promise<void> {
-  return import("@ricky0123/vad-web").then(() => undefined);
+  return Promise.all([
+    import("@ricky0123/vad-web"),
+    ...SILERO_ASSET_URLS.map((url) =>
+      fetch(url).then((res) => {
+        if (!res.ok) throw new Error(`Failed to preload ${url}`);
+        return res.arrayBuffer();
+      }),
+    ),
+  ]).then(() => undefined);
 }

@@ -79,4 +79,19 @@ describe("live-session VAD wiring", () => {
   it("resumes AudioContext after the async WS handshake so the worklet can emit PCM", () => {
     expect(sessionSource).toMatch(/audioCtx\.resume\(/);
   });
+
+  it("warms Silero before setup_complete so Connecting is not Gemini then ONNX in series", () => {
+    expect(sessionSource).toMatch(/warmSilero/);
+    const connectStart = sessionSource.indexOf("private async doConnect");
+    const connectEnd = sessionSource.indexOf("private handleEvent");
+    const connectBody = sessionSource.slice(connectStart, connectEnd);
+    expect(connectBody).toMatch(/warmSilero/);
+    expect(sessionSource.indexOf("warmSilero")).toBeLessThan(
+      sessionSource.indexOf('case "setup_complete"'),
+    );
+  });
+
+  it("resumes AudioContext after setup_complete so the worklet is not left suspended", () => {
+    expect(sessionSource).toMatch(/audioCtx\.resume\(\)/);
+  });
 });
