@@ -1,6 +1,6 @@
 import type { ContextPreset, FactCheckResult, Verdict } from "@/types";
 import type { Claim, ClaimAction, ClaimId, ListenReady, TurnId } from "@/types/claim";
-import { newClaimId, reduceClaims, UNCONFIRMED_HEARD_MS } from "@/lib/claim-machine";
+import { reduceClaims } from "@/lib/claim-machine";
 import { pullCompletedSentences, type TranscriptTail } from "@/lib/hear-sentences";
 import { isEnglishClaimText } from "@/lib/claim-language";
 import { apiFetch, backendUrl } from "@/lib/api";
@@ -83,14 +83,11 @@ export class LiveSession {
   private trialEnded = false;
   private connectInFlight: Promise<void> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private originMs = Date.now();
   private turnSeq = 0;
   private tail: TranscriptTail = { buffer: "", turnId: 0 as TurnId };
   private pad = new PcmPadBuffer();
   private outbound: Outgoing[] = [];
   private flushScheduled = false;
-  private retractTimers = new Map<number, ReturnType<typeof setTimeout>>();
-  private lastEndedTurnId: TurnId | null = null;
 
   constructor(opts: LiveSessionOpts) {
     this.sessionId = opts.sessionId;
@@ -169,7 +166,6 @@ export class LiveSession {
     this.stopped = true;
     this.clearIdle();
     this.clearReconnect();
-    this.clearRetractTimers();
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.enqueue({ kind: "control", json: JSON.stringify({ type: "stop" }) });
       this.flushOutbound();
@@ -236,18 +232,12 @@ export class LiveSession {
     }
   }
 
-  private clearRetractTimers(): void {
-    for (const timer of this.retractTimers.values()) clearTimeout(timer);
-    this.retractTimers.clear();
-  }
-
   private startNewTurn(): void {
     this.turnSeq += 1;
     this.tail = { buffer: "", turnId: this.turnSeq as TurnId };
   }
 
   private cutGeminiTurn(): void {
-    this.lastEndedTurnId = this.tail.turnId;
     this.sendActivity("speech_end");
     this.sendActivity("speech_start");
   }
@@ -333,7 +323,6 @@ export class LiveSession {
         return;
       }
       case "speech_end": {
-        this.lastEndedTurnId = this.tail.turnId;
         this.sendActivity("speech_end");
         this.startNewTurn();
         this.sendActivity("speech_start");
@@ -354,36 +343,7 @@ export class LiveSession {
     const pulled = pullCompletedSentences(this.tail, text);
     this.tail = pulled.next;
     if (pulled.sentences.length === 0) return;
-    this.hearSentences(pulled.sentences);
     this.cutGeminiTurn();
-  }
-
-  private onTurnComplete(): void {
-    const turnId = this.lastEndedTurnId ?? this.tail.turnId;
-    this.lastEndedTurnId = null;
-    const existing = this.retractTimers.get(turnId);
-    if (existing != null) clearTimeout(existing);
-    this.retractTimers.set(
-      turnId,
-      setTimeout(() => {
-        this.retractTimers.delete(turnId);
-        this.dispatch({ type: "retractUnconfirmed", turnId, nowMs: Date.now() });
-      }, UNCONFIRMED_HEARD_MS),
-    );
-  }
-
-  private hearSentences(sentences: string[]): void {
-    const timestamp = Math.floor((Date.now() - this.originMs) / 1000);
-    for (const claim_text of sentences) {
-      this.dispatch({
-        type: "hear",
-        id: newClaimId(),
-        claim_text,
-        timestamp_seconds: timestamp,
-        turnId: this.tail.turnId,
-        nowMs: Date.now(),
-      });
-    }
   }
 
   private onReportClaim(event: Extract<LiveEvent, { type: "claim" }>): void {
@@ -734,12 +694,10 @@ export class LiveSession {
       case "transcript":
         this.onTranscript(liveEvent.text);
         return;
-      case "turn_complete":
-        this.onTurnComplete();
-        return;
       case "claim":
         this.onReportClaim(liveEvent);
         return;
+      case "turn_complete":
       case "ignored":
         return;
       default: {

@@ -4,9 +4,18 @@ import { useState } from "react";
 import { TopBar } from "@/components/top-bar";
 import { VerdictFeed } from "@/components/verdict-feed";
 import { SessionExitDialog } from "@/components/session-exit-dialog";
-import type { Claim, ClaimId, ClaimTextKey } from "@/types/claim";
+import type { Claim, ClaimId, ClaimTextKey, TurnId } from "@/types/claim";
 
 const previewClaims: Claim[] = [
+  {
+    phase: "heard",
+    id: "preview-heard" as ClaimId,
+    claim_text: "Louis Hamilton, one",
+    textKey: "louis hamilton, one" as ClaimTextKey,
+    timestamp_seconds: 1,
+    turnId: 1 as TurnId,
+    heardAtMs: 0,
+  },
   {
     phase: "checking",
     id: "preview-checking" as ClaimId,
