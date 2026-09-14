@@ -1,7 +1,3 @@
-/**
- * Gate claim text for the English-first listen path.
- * Rejects STT noise tags and transcripts that are not mostly Latin script.
- */
 export function isEnglishClaimText(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.length === 0) return false;

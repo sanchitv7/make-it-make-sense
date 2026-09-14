@@ -837,7 +837,6 @@ const SILERO_ASSET_URLS = [
   "/vad/vad.worklet.bundle.min.js",
 ] as const;
 
-/** Prefetch vad-web + ONNX/WASM into the HTTP cache during Begin. */
 export function preloadSileroAssets(): Promise<void> {
   return Promise.all([
     import("@ricky0123/vad-web"),
