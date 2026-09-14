@@ -49,7 +49,6 @@ type LiveEvent =
   | { type: "auth_ok" }
   | { type: "setup_complete" }
   | { type: "transcript"; text: string }
-  | { type: "turn_complete" }
   | { type: "claim"; toolCallId: string; name: string; args: Record<string, unknown> }
   | { type: "trial_expired" }
   | { type: "ignored" };
@@ -697,7 +696,6 @@ export class LiveSession {
       case "claim":
         this.onReportClaim(liveEvent);
         return;
-      case "turn_complete":
       case "ignored":
         return;
       default: {
@@ -739,7 +737,6 @@ function parseLiveMessage(raw: unknown): LiveEvent[] {
       const text = (it as { text?: unknown }).text;
       if (typeof text === "string" && text) events.push({ type: "transcript", text });
     }
-    if (content.turnComplete) events.push({ type: "turn_complete" });
   }
 
   const tc = msg.toolCall;

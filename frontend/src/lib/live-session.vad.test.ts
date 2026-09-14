@@ -70,6 +70,8 @@ describe("live-session VAD wiring", () => {
     expect(sessionSource).not.toMatch(/type: "hear"/);
     expect(sessionSource).not.toMatch(/retractUnconfirmed/);
     expect(sessionSource).not.toMatch(/lastEndedTurnId/);
+    expect(sessionSource).not.toMatch(/turn_complete/);
+    expect(sessionSource).not.toMatch(/turnComplete/);
     const transcript = sessionSource.slice(
       sessionSource.indexOf("private onTranscript"),
       sessionSource.indexOf("private onReportClaim"),
