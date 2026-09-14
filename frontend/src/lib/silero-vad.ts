@@ -17,8 +17,8 @@ export interface SpeechFlushState {
 export const DEFAULT_MAX_SPEECH_MS = 2500;
 
 export const SILERO_POSITIVE_SPEECH_THRESHOLD = 0.3;
-export const SILERO_NEGATIVE_SPEECH_THRESHOLD = 0.15;
-export const SILERO_REDEMPTION_MS = 250;
+export const SILERO_NEGATIVE_SPEECH_THRESHOLD = 0.25;
+export const SILERO_REDEMPTION_MS = 1400;
 export const SILERO_MIN_SPEECH_MS = 250;
 export const SILERO_PRE_SPEECH_PAD_MS = 300;
 
@@ -50,13 +50,6 @@ export function applySpeechStart(state: SpeechFlushState, nowMs: number): Speech
 
 export function applySpeechEnd(): SpeechFlushState {
   return { speaking: false, speechStartedAtMs: null };
-}
-
-export function beginListening(nowMs: number): { event: SileroVadEvent; state: SpeechFlushState } {
-  return {
-    event: "speech_start",
-    state: applySpeechStart({ speaking: false, speechStartedAtMs: null }, nowMs),
-  };
 }
 
 export type VadTurnState = {
@@ -168,9 +161,6 @@ export async function createSileroVad(options: CreateSileroVadOptions): Promise<
 
   return {
     start: async () => {
-      const opened = beginListening(now());
-      turn = { flush: opened.state, confirmedSpeech: false };
-      emit(opened.event);
       startFlushTimer();
       await micVad.start();
     },

@@ -104,11 +104,11 @@ describe("reduceClaims promote", () => {
   it("matches heard by containment when textKeys differ and keeps id", () => {
     const started = hear([], {
       id: "contain-me",
-      claim_text: "the unemployment rate is 3 percent",
+      claim_text: "The unemployment rate is 3 percent.",
     });
     const promoted = reduceClaims(started.claims, {
       type: "promote",
-      reportText: "The unemployment rate is 3 percent this year according to BLS",
+      reportText: "The unemployment rate is 3 percent. BLS confirmed the figure.",
       context: "BLS briefing",
       timestamp_seconds: 4,
     });
