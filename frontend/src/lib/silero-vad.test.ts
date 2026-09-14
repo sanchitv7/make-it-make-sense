@@ -3,7 +3,6 @@ import {
   applySpeechEnd,
   applySpeechStart,
   applyVadMisfire,
-  beginListening,
   DEFAULT_MAX_SPEECH_MS,
   maybeFlushLongSpeech,
   SILERO_MIN_SPEECH_MS,
@@ -17,20 +16,11 @@ import {
 describe("Silero tunings", () => {
   it("uses far-field thresholds and a 2.5s max-speech flush", () => {
     expect(SILERO_POSITIVE_SPEECH_THRESHOLD).toBe(0.3);
-    expect(SILERO_NEGATIVE_SPEECH_THRESHOLD).toBe(0.15);
-    expect(SILERO_REDEMPTION_MS).toBe(250);
+    expect(SILERO_NEGATIVE_SPEECH_THRESHOLD).toBe(0.25);
+    expect(SILERO_REDEMPTION_MS).toBe(1400);
     expect(SILERO_MIN_SPEECH_MS).toBe(250);
     expect(SILERO_PRE_SPEECH_PAD_MS).toBe(300);
     expect(DEFAULT_MAX_SPEECH_MS).toBe(2500);
-  });
-});
-
-describe("beginListening", () => {
-  it("opens a turn immediately when Silero starts", () => {
-    expect(beginListening(1000)).toEqual({
-      event: "speech_start",
-      state: { speaking: true, speechStartedAtMs: 1000 },
-    });
   });
 });
 
@@ -62,8 +52,8 @@ describe("applySpeechStart / applySpeechEnd", () => {
 });
 
 describe("applyVadMisfire", () => {
-  it("does not kill a beginListening turn before MicVAD confirms speech", () => {
-    const opened = beginListening(1000).state;
+  it("does not kill a turn before MicVAD confirms speech", () => {
+    const opened = applySpeechStart({ speaking: false, speechStartedAtMs: null }, 1000);
     const result = applyVadMisfire({ flush: opened, confirmedSpeech: false });
     expect(result.events).toEqual([]);
     expect(result.next.flush).toEqual(opened);
@@ -78,10 +68,10 @@ describe("applyVadMisfire", () => {
     expect(result.next.confirmedSpeech).toBe(false);
   });
 
-  it("keeps the 2.5s flush clock alive after an early misfire", () => {
-    const opened = beginListening(1000).state;
-    const afterMisfire = applyVadMisfire({ flush: opened, confirmedSpeech: false }).next;
+  it("does not flush silence before real speech is confirmed", () => {
+    const idle: SpeechFlushState = { speaking: false, speechStartedAtMs: null };
+    const afterMisfire = applyVadMisfire({ flush: idle, confirmedSpeech: false }).next;
     const flush = maybeFlushLongSpeech(afterMisfire.flush, 1000 + DEFAULT_MAX_SPEECH_MS);
-    expect(flush.events).toEqual(["turn_flush"]);
+    expect(flush.events).toEqual([]);
   });
 });

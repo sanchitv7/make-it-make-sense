@@ -1,11 +1,7 @@
 import type { ContextPreset, FactCheckResult, Verdict } from "@/types";
 import type { Claim, ClaimAction, ClaimId, ListenReady, TurnId } from "@/types/claim";
 import { newClaimId, reduceClaims, UNCONFIRMED_HEARD_MS } from "@/lib/claim-machine";
-import {
-  pullCompletedSentences,
-  pullRemainderOnSpeechEnd,
-  type TranscriptTail,
-} from "@/lib/hear-sentences";
+import { pullCompletedSentences, type TranscriptTail } from "@/lib/hear-sentences";
 import { isEnglishClaimText } from "@/lib/claim-language";
 import { apiFetch, backendUrl } from "@/lib/api";
 import { TRIAL_EXPIRED_DETAIL } from "@/lib/trial";
@@ -94,6 +90,7 @@ export class LiveSession {
   private outbound: Outgoing[] = [];
   private flushScheduled = false;
   private retractTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private lastEndedTurnId: TurnId | null = null;
 
   constructor(opts: LiveSessionOpts) {
     this.sessionId = opts.sessionId;
@@ -250,6 +247,7 @@ export class LiveSession {
   }
 
   private cutGeminiTurn(): void {
+    this.lastEndedTurnId = this.tail.turnId;
     this.sendActivity("speech_end");
     this.sendActivity("speech_start");
   }
@@ -301,8 +299,10 @@ export class LiveSession {
         if (this.turnOpen) return;
         this.turnOpen = true;
         this.enqueue({ kind: "control", json: JSON.stringify({ type: "activity_start" }) });
-        const dump = this.pad.takeLast(SILERO_PRE_SPEECH_PAD_MS);
+        const needsPad = !this.pcmLive;
         this.pcmLive = true;
+        if (!needsPad) return;
+        const dump = this.pad.takeLast(SILERO_PRE_SPEECH_PAD_MS);
         if (dump.length > 0) {
           this.enqueue({
             kind: "audio",
@@ -327,15 +327,14 @@ export class LiveSession {
   private onSileroEvent(event: SileroVadEvent): void {
     switch (event) {
       case "speech_start": {
+        if (this.turnOpen) return;
         this.startNewTurn();
         this.sendActivity("speech_start");
         return;
       }
       case "speech_end": {
+        this.lastEndedTurnId = this.tail.turnId;
         this.sendActivity("speech_end");
-        const pulled = pullRemainderOnSpeechEnd(this.tail);
-        this.tail = pulled.next;
-        this.hearSentences(pulled.sentences);
         this.startNewTurn();
         this.sendActivity("speech_start");
         return;
@@ -360,7 +359,8 @@ export class LiveSession {
   }
 
   private onTurnComplete(): void {
-    const turnId = this.tail.turnId;
+    const turnId = this.lastEndedTurnId ?? this.tail.turnId;
+    this.lastEndedTurnId = null;
     const existing = this.retractTimers.get(turnId);
     if (existing != null) clearTimeout(existing);
     this.retractTimers.set(
@@ -565,6 +565,8 @@ export class LiveSession {
     }
     this.silero = vad;
     await vad.start();
+    this.startNewTurn();
+    this.sendActivity("speech_start");
   }
 
   private async startAudio(ws: WebSocket): Promise<void> {
@@ -835,7 +837,6 @@ const SILERO_ASSET_URLS = [
   "/vad/vad.worklet.bundle.min.js",
 ] as const;
 
-/** Prefetch vad-web + ONNX/WASM into the HTTP cache during Begin. */
 export function preloadSileroAssets(): Promise<void> {
   return Promise.all([
     import("@ricky0123/vad-web"),

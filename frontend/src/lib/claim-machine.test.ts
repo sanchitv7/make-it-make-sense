@@ -41,10 +41,13 @@ describe("reduceClaims hear", () => {
     expect(short.claims).toEqual([]);
     expect(short.effect).toBe("none");
 
-    const kept = hear([], { id: "b", claim_text: "Water boils at" });
+    const kept = hear([], { id: "b", claim_text: "Water boils at 100 C." });
     expect(kept.claims).toHaveLength(1);
     expect(kept.claims[0]?.phase).toBe("heard");
     expect(kept.claims[0]?.id).toBe("b");
+
+    const fragment = hear([], { id: "c", claim_text: "Water boils at" });
+    expect(fragment.claims).toEqual([]);
   });
 
   it("drops a duplicate textKey in any phase", () => {
@@ -101,11 +104,11 @@ describe("reduceClaims promote", () => {
   it("matches heard by containment when textKeys differ and keeps id", () => {
     const started = hear([], {
       id: "contain-me",
-      claim_text: "the unemployment rate is 3 percent",
+      claim_text: "The unemployment rate is 3 percent.",
     });
     const promoted = reduceClaims(started.claims, {
       type: "promote",
-      reportText: "The unemployment rate is 3 percent this year according to BLS",
+      reportText: "The unemployment rate is 3 percent. BLS confirmed the figure.",
       context: "BLS briefing",
       timestamp_seconds: 4,
     });

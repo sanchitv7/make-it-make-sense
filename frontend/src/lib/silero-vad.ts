@@ -1,8 +1,3 @@
-/**
- * Silero speech-activity events.
- * speech_start / speech_end map to Gemini activity signals.
- * turn_flush cuts a long continuous turn without treating it as a real pause.
- */
 export type SileroVadEvent = "speech_start" | "speech_end" | "turn_flush";
 
 /** Events that map 1:1 to Gemini activity_start / activity_end. */
@@ -13,20 +8,14 @@ export interface SpeechFlushState {
   speechStartedAtMs: number | null;
 }
 
-/** Force a turn during continuous speech so report_claim can fire without a pause. */
 export const DEFAULT_MAX_SPEECH_MS = 2500;
 
 export const SILERO_POSITIVE_SPEECH_THRESHOLD = 0.3;
-export const SILERO_NEGATIVE_SPEECH_THRESHOLD = 0.15;
-export const SILERO_REDEMPTION_MS = 250;
+export const SILERO_NEGATIVE_SPEECH_THRESHOLD = 0.25;
+export const SILERO_REDEMPTION_MS = 1400;
 export const SILERO_MIN_SPEECH_MS = 250;
 export const SILERO_PRE_SPEECH_PAD_MS = 300;
 
-/**
- * Pure helper: if speech has been continuous longer than maxSpeechMs,
- * emit turn_flush and reset the speech clock. Does not emit speech_end —
- * callers must cut the Gemini turn without painting an unfinished remainder.
- */
 export function maybeFlushLongSpeech(
   state: SpeechFlushState,
   nowMs: number,
@@ -50,13 +39,6 @@ export function applySpeechStart(state: SpeechFlushState, nowMs: number): Speech
 
 export function applySpeechEnd(): SpeechFlushState {
   return { speaking: false, speechStartedAtMs: null };
-}
-
-export function beginListening(nowMs: number): { event: SileroVadEvent; state: SpeechFlushState } {
-  return {
-    event: "speech_start",
-    state: applySpeechStart({ speaking: false, speechStartedAtMs: null }, nowMs),
-  };
 }
 
 export type VadTurnState = {
@@ -87,14 +69,11 @@ export interface CreateSileroVadOptions {
   stream: MediaStream;
   onEvent: (event: SileroVadEvent) => void;
   maxSpeechMs?: number;
-  /** Injected for tests; defaults to Date.now. */
   now?: () => number;
 }
 
 /**
- * Start Silero MicVAD on an existing mic stream (does not open a second mic).
- * Emits speech_start / speech_end / turn_flush for Gemini activity signals.
- *
+ * Default MicVAD `getStream` opens a second mic. Pass the app stream.
  * Dynamic import: @ricky0123/vad-web pulls ONNX/WASM and must not load at SSR.
  */
 export async function createSileroVad(options: CreateSileroVadOptions): Promise<SileroVadHandle> {
@@ -168,9 +147,6 @@ export async function createSileroVad(options: CreateSileroVadOptions): Promise<
 
   return {
     start: async () => {
-      const opened = beginListening(now());
-      turn = { flush: opened.state, confirmedSpeech: false };
-      emit(opened.event);
       startFlushTimer();
       await micVad.start();
     },
