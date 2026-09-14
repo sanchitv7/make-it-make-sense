@@ -41,10 +41,13 @@ describe("reduceClaims hear", () => {
     expect(short.claims).toEqual([]);
     expect(short.effect).toBe("none");
 
-    const kept = hear([], { id: "b", claim_text: "Water boils at" });
+    const kept = hear([], { id: "b", claim_text: "Water boils at 100 C." });
     expect(kept.claims).toHaveLength(1);
     expect(kept.claims[0]?.phase).toBe("heard");
     expect(kept.claims[0]?.id).toBe("b");
+
+    const fragment = hear([], { id: "c", claim_text: "Water boils at" });
+    expect(fragment.claims).toEqual([]);
   });
 
   it("drops a duplicate textKey in any phase", () => {

@@ -36,8 +36,9 @@ describe("live-session VAD wiring", () => {
   });
 
   it("opens a Gemini turn when Silero starts instead of waiting for onSpeechStart", () => {
-    expect(sileroSource).toMatch(/beginListening/);
-    expect(sessionSource).toMatch(/activity_start/);
+    expect(sessionSource).toMatch(/await vad\.start\(\)/);
+    expect(sessionSource).toMatch(/sendActivity\("speech_start"\)/);
+    expect(sileroSource).not.toMatch(/beginListening/);
   });
 
   it("reopens the Gemini turn after speech_end so audio keeps flowing", () => {
@@ -74,6 +75,13 @@ describe("live-session VAD wiring", () => {
     );
     expect(transcript).toMatch(/hearSentences/);
     expect(sessionSource).not.toMatch(/throw new Error\("Fact-check failed"\)/);
+    const sileroHandler = sessionSource.slice(
+      sessionSource.indexOf("private onSileroEvent"),
+      sessionSource.indexOf("private onTranscript"),
+    );
+    expect(sileroHandler).not.toMatch(/hearSentences/);
+    expect(sileroHandler).not.toMatch(/pullRemainderOnSpeechEnd/);
+    expect(sessionSource).toMatch(/lastEndedTurnId/);
   });
 
   it("resumes AudioContext after the async WS handshake so the worklet can emit PCM", () => {
