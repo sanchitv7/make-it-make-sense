@@ -63,17 +63,24 @@ describe("live-session VAD wiring", () => {
     expect(handler).not.toMatch(/hearSentences/);
   });
 
-  it("paints heard cards from completed transcript sentences, then promotes on report_claim", () => {
-    expect(sessionSource).toMatch(/hearSentences/);
-    expect(sessionSource).toMatch(/type: "hear"/);
+  it("cuts Gemini on completed transcript sentences without painting heard cards", () => {
     expect(sessionSource).toMatch(/pullCompletedSentences/);
-    expect(sessionSource).toMatch(/retractUnconfirmed/);
     expect(sessionSource).toMatch(/type: "promote"/);
+    expect(sessionSource).not.toMatch(/hearSentences/);
+    expect(sessionSource).not.toMatch(/type: "hear"/);
+    expect(sessionSource).not.toMatch(/retractUnconfirmed/);
+    expect(sessionSource).not.toMatch(/lastEndedTurnId/);
+    expect(sessionSource).not.toMatch(/turn_complete/);
+    expect(sessionSource).not.toMatch(/turnComplete/);
     const transcript = sessionSource.slice(
       sessionSource.indexOf("private onTranscript"),
-      sessionSource.indexOf("private onTurnComplete"),
+      sessionSource.indexOf("private onReportClaim"),
     );
-    expect(transcript).toMatch(/hearSentences/);
+    expect(transcript).toMatch(/pullCompletedSentences/);
+    expect(transcript).toMatch(/cutGeminiTurn/);
+    expect(transcript).not.toMatch(/hearSentences/);
+    expect(transcript).not.toMatch(/type: "hear"/);
+    expect(transcript).not.toMatch(/retractUnconfirmed/);
     expect(sessionSource).not.toMatch(/throw new Error\("Fact-check failed"\)/);
     const sileroHandler = sessionSource.slice(
       sessionSource.indexOf("private onSileroEvent"),
@@ -81,7 +88,7 @@ describe("live-session VAD wiring", () => {
     );
     expect(sileroHandler).not.toMatch(/hearSentences/);
     expect(sileroHandler).not.toMatch(/pullRemainderOnSpeechEnd/);
-    expect(sessionSource).toMatch(/lastEndedTurnId/);
+    expect(sileroHandler).not.toMatch(/type: "hear"/);
   });
 
   it("resumes AudioContext after the async WS handshake so the worklet can emit PCM", () => {
